@@ -16,6 +16,9 @@ import { SellerProductsModule } from './sellers/seller-products/seller-products.
 import { SellerOrdersModule } from './sellers/seller-orders/seller-orders.module';
 import { SellerProfileModule } from './sellers/seller-profile/seller-profile.module';
 import { SellerCampaignsModule } from './sellers/seller-campaigns/seller-campaigns.module';
+import { CartModule } from './cart/cart.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { MinioService } from './common/services/minio.service';
 import configuration from './config/configuration';
@@ -57,6 +60,9 @@ import configuration from './config/configuration';
     SellerOrdersModule,
     SellerProfileModule,
     SellerCampaignsModule,
+    CartModule,
+    ReviewsModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, MinioService],

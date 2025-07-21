@@ -225,12 +225,12 @@ export class AdminCampaignsService {
     }
 
     const products = await this.productModel
-              .find({ _id: { $in: campaign.productIds } })
+      .find({ _id: { $in: campaign.productIds } })
       .populate('sellerId', 'firstName lastName')
       .exec();
 
     const categories = await this.categoryModel
-              .find({ _id: { $in: campaign.categoryIds } })
+      .find({ _id: { $in: campaign.categoryIds } })
       .exec();
 
     return {

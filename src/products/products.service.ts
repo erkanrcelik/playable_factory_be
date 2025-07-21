@@ -8,12 +8,45 @@ import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from '../schemas/product.schema';
 import { UserRole } from '../schemas/user.schema';
 import { FindAllProductsDto } from './dto/find-all-products.dto';
+import { Campaign, CampaignDocument } from '../schemas/campaign.schema';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
   ) {}
+
+  // Kampanyalı fiyat hesaplama fonksiyonu
+  private async getDiscountedPrice(product: any): Promise<number | null> {
+    const now = new Date();
+    // Aktif kampanyaları bul (platform veya satıcı, ürün veya kategoride geçerli)
+    const campaigns = await this.campaignModel
+      .find({
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        $or: [
+          { productIds: product._id },
+          { categoryIds: product.category },
+          { type: 'platform' },
+        ],
+      })
+      .lean();
+    if (!campaigns.length) return null;
+    // En avantajlı kampanyayı uygula
+    let minPrice = product.price;
+    for (const campaign of campaigns) {
+      let discounted = product.price;
+      if (campaign.discountType === ('percentage' as any)) {
+        discounted = product.price * (1 - campaign.discountValue / 100);
+      } else if (campaign.discountType === ('amount' as any)) {
+        discounted = product.price - campaign.discountValue;
+      }
+      if (discounted < minPrice) minPrice = discounted;
+    }
+    return Math.max(0, Math.round(minPrice * 100) / 100);
+  }
 
   async create(createProductDto: Product, sellerId: string): Promise<Product> {
     const product = new this.productModel({
@@ -84,8 +117,16 @@ export class ProductsService {
       this.productModel.countDocuments(query),
     ]);
 
+    // Kampanyalı fiyatları ekle
+    const productsWithDiscount = await Promise.all(
+      products.map(async (product) => {
+        const discountedPrice = await this.getDiscountedPrice(product);
+        return { ...product, discountedPrice };
+      }),
+    );
+
     return {
-      data: products,
+      data: productsWithDiscount,
       total,
       page,
       limit,
@@ -93,17 +134,18 @@ export class ProductsService {
     };
   }
 
-  async findOneProduct(id: string): Promise<Product> {
+  async findOneProduct(id: string): Promise<any> {
     const product = await this.productModel
       .findById(id)
       .populate('category', 'name')
       .populate('sellerId', 'firstName lastName')
-      .exec();
+      .lean();
 
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return product;
+    const discountedPrice = await this.getDiscountedPrice(product);
+    return { ...product, discountedPrice };
   }
 
   async update(
