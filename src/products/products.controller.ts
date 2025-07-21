@@ -1,128 +1,151 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Put,
-  Param,
-  Delete,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
-  ApiExcludeController,
+  ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserRole, UserDocument } from '../schemas/user.schema';
-import { Product } from '../schemas/product.schema';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { findAllProductsSchema } from './dto/find-all-products.dto';
 
-@ApiExcludeController()
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  /**
+   * Get all products
+   */
   @Get()
-  @ApiOperation({ summary: 'Get all products with filters' })
-  @ApiResponse({ status: 200, description: 'Products retrieved successfully' })
-  async findAll(@Query() query: Record<string, unknown>) {
-    return this.productsService.findAll(query);
+  @ApiOperation({
+    summary: 'Get all products',
+    description:
+      'Retrieve all active products with optional filtering and pagination',
+  })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term' })
+  @ApiQuery({ name: 'category', required: false, description: 'Category ID' })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    description: 'Active status filter',
+  })
+  @ApiQuery({
+    name: 'isFeatured',
+    required: false,
+    description: 'Featured status filter',
+  })
+  @ApiQuery({ name: 'minPrice', required: false, description: 'Minimum price' })
+  @ApiQuery({ name: 'maxPrice', required: false, description: 'Maximum price' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field' })
+  @ApiQuery({ name: 'sortOrder', required: false, description: 'Sort order' })
+  @ApiResponse({
+    status: 200,
+    description: 'Products retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              price: { type: 'number' },
+              category: { type: 'object' },
+              imageUrls: { type: 'array', items: { type: 'string' } },
+              isActive: { type: 'boolean' },
+              isFeatured: { type: 'boolean' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
+            },
+          },
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' },
+      },
+    },
+  })
+  async findAllProducts(
+    @Query(new ZodValidationPipe(findAllProductsSchema)) query: any,
+  ) {
+    return this.productsService.findAllProducts(query);
   }
 
+  /**
+   * Get featured products
+   */
   @Get('featured')
-  @ApiOperation({ summary: 'Get featured products' })
+  @ApiOperation({
+    summary: 'Get featured products',
+    description: 'Retrieve all featured products',
+  })
   @ApiResponse({
     status: 200,
     description: 'Featured products retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          name: { type: 'string' },
+          description: { type: 'string' },
+          price: { type: 'number' },
+          category: { type: 'object' },
+          imageUrls: { type: 'array', items: { type: 'string' } },
+          isActive: { type: 'boolean' },
+          isFeatured: { type: 'boolean' },
+          createdAt: { type: 'string' },
+          updatedAt: { type: 'string' },
+        },
+      },
+    },
   })
   async getFeaturedProducts() {
     return this.productsService.getFeaturedProducts();
   }
 
+  /**
+   * Get product by ID
+   */
   @Get(':id')
-  @ApiOperation({ summary: 'Get product by ID' })
-  @ApiResponse({ status: 200, description: 'Product retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get product by ID',
+    description: 'Retrieve a specific product by its ID',
+  })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        name: { type: 'string' },
+        description: { type: 'string' },
+        price: { type: 'number' },
+        category: { type: 'object' },
+        imageUrls: { type: 'array', items: { type: 'string' } },
+        specifications: { type: 'object' },
+        tags: { type: 'array', items: { type: 'string' } },
+        isActive: { type: 'boolean' },
+        isFeatured: { type: 'boolean' },
+        variants: { type: 'array' },
+        createdAt: { type: 'string' },
+        updatedAt: { type: 'string' },
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async findOne(@Param('id') id: string) {
-    return this.productsService.findOne(id);
-  }
-
-  @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SELLER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create new product (Seller/Admin only)' })
-  @ApiResponse({ status: 201, description: 'Product created successfully' })
-  @ApiBearerAuth()
-  async create(
-    @Body() createProductDto: Product,
-    @CurrentUser() user: UserDocument,
-  ) {
-    const userId = String(user._id);
-    return this.productsService.create(createProductDto, userId);
-  }
-
-  @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SELLER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update product (Seller/Admin only)' })
-  @ApiResponse({ status: 200, description: 'Product updated successfully' })
-  @ApiBearerAuth()
-  async update(
-    @Param('id') id: string,
-    @Body() updateProductDto: Product,
-    @CurrentUser() user: UserDocument,
-  ) {
-    const userId = String(user._id);
-    return this.productsService.update(id, updateProductDto, userId, user.role);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SELLER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete product (Seller/Admin only)' })
-  @ApiResponse({ status: 200, description: 'Product deleted successfully' })
-  @ApiBearerAuth()
-  async remove(@Param('id') id: string, @CurrentUser() user: UserDocument) {
-    const userId = String(user._id);
-    return this.productsService.remove(id, userId, user.role);
-  }
-
-  @Get('seller/my-products')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SELLER)
-  @ApiOperation({ summary: 'Get seller products (Seller only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Seller products retrieved successfully',
-  })
-  @ApiBearerAuth()
-  async getMyProducts(@CurrentUser() user: UserDocument) {
-    const userId = String(user._id);
-    return this.productsService.findBySeller(userId);
-  }
-
-  @Put(':id/toggle-featured')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Toggle product featured status (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Product featured status toggled successfully',
-  })
-  @ApiBearerAuth()
-  async toggleFeatured(
-    @Param('id') id: string,
-    @CurrentUser() user: UserDocument,
-  ) {
-    const userId = String(user._id);
-    return this.productsService.toggleFeatured(id, userId, user.role);
+  async findOneProduct(@Param('id') id: string) {
+    return this.productsService.findOneProduct(id);
   }
 }

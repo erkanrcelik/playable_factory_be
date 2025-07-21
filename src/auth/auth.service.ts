@@ -363,28 +363,33 @@ export class AuthService {
   }
 
   async getUserInfo(userId: string) {
-    const user = await this.userModel.findById(userId).select('-password');
+    try {
+      const user = await this.userModel.findById(userId).select('-password');
 
-    if (!user) {
-      throw new UnauthorizedException(
-        AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
-      );
+      if (!user) {
+        throw new UnauthorizedException(
+          AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
+        );
+      }
+
+      return {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        phoneNumber: user.phoneNumber,
+        addresses: user.addresses || [],
+        preferences: user.preferences || {},
+        isEmailVerified: user.isEmailVerified,
+        isActive: user.isActive,
+        lastLogoutAt: user.lastLogoutAt,
+        createdAt: (user as any).createdAt,
+        updatedAt: (user as any).updatedAt,
+      };
+    } catch (error) {
+      console.error('getUserInfo error:', error);
+      throw error;
     }
-
-    return {
-      id: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      phoneNumber: user.phoneNumber,
-      addresses: user.addresses,
-      preferences: user.preferences,
-      isEmailVerified: user.isEmailVerified,
-      isActive: user.isActive,
-      lastLogoutAt: user.lastLogoutAt,
-      createdAt: (user as any).createdAt,
-      updatedAt: (user as any).updatedAt,
-    };
   }
 }

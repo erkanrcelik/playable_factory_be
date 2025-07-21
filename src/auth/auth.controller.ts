@@ -35,7 +35,6 @@ import {
 import { AuthError, AuthErrorMessages } from './enums';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserDocument } from '../schemas/user.schema';
 
 /**
  * Authentication Controller
@@ -659,7 +658,7 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized - Invalid or missing token',
   })
-  async getUserInfo(@CurrentUser() user: UserDocument) {
-    return this.authService.getUserInfo(String(user._id));
+  async getUserInfo(@CurrentUser() user: any) {
+    return this.authService.getUserInfo(user.id);
   }
 }

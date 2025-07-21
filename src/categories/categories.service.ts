@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, UpdateQuery } from 'mongoose';
 import { Category, CategoryDocument } from '../schemas/category.schema';
+import { FindAllCategoriesDto } from './dto/find-all-categories.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -14,11 +15,54 @@ export class CategoriesService {
     return category.save();
   }
 
-  async findAll(): Promise<Category[]> {
-    return this.categoryModel.find({ isActive: true }).exec();
+  async findAllCategories(options: FindAllCategoriesDto) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      isActive,
+      sortBy = 'name',
+      sortOrder = 'asc',
+    } = options;
+
+    const query: any = {};
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (isActive !== undefined) {
+      query.isActive = isActive;
+    }
+
+    const sortOptions: any = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const skip = (page - 1) * limit;
+
+    const [categories, total] = await Promise.all([
+      this.categoryModel
+        .find(query)
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.categoryModel.countDocuments(query),
+    ]);
+
+    return {
+      data: categories,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  async findOne(id: string): Promise<Category> {
+  async findOneCategory(id: string): Promise<Category> {
     const category = await this.categoryModel.findById(id).exec();
     if (!category) {
       throw new NotFoundException('Category not found');

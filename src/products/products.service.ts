@@ -4,9 +4,10 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from '../schemas/product.schema';
 import { UserRole } from '../schemas/user.schema';
+import { FindAllProductsDto } from './dto/find-all-products.dto';
 
 @Injectable()
 export class ProductsService {
@@ -22,59 +23,77 @@ export class ProductsService {
     return product.save();
   }
 
-  async findAll(query: Record<string, unknown> = {}): Promise<Product[]> {
+  async findAllProducts(options: FindAllProductsDto) {
     const {
+      page = 1,
+      limit = 10,
+      search,
       category,
+      isActive,
+      isFeatured,
       minPrice,
       maxPrice,
-      search,
-      isFeatured,
-      page = 1,
-      limit = 20,
-    } = query;
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = options;
 
-    const filter: Record<string, unknown> = { isActive: true };
-
-    if (category) {
-      filter.category = category;
-    }
-
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice)
-        (filter.price as Record<string, unknown>).$gte = parseFloat(
-          minPrice as string,
-        );
-      if (maxPrice)
-        (filter.price as Record<string, unknown>).$lte = parseFloat(
-          maxPrice as string,
-        );
-    }
-
-    if (isFeatured) {
-      filter.isFeatured = isFeatured === 'true';
-    }
+    const query: any = {};
 
     if (search) {
-      filter.$or = [
+      query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search as string, 'i')] } },
+        { tags: { $in: [new RegExp(search, 'i')] } },
       ];
     }
 
-    const skip = ((page as number) - 1) * (limit as number);
+    if (category) {
+      query.category = new Types.ObjectId(category);
+    }
 
-    return this.productModel
-      .find(filter)
-      .populate('category', 'name')
-      .populate('sellerId', 'firstName lastName')
-      .skip(skip)
-      .limit(parseInt(limit as string))
-      .exec();
+    if (isActive !== undefined) {
+      query.isActive = isActive;
+    } else {
+      query.isActive = true; // Default to active products
+    }
+
+    if (isFeatured !== undefined) {
+      query.isFeatured = isFeatured;
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) query.price.$gte = minPrice;
+      if (maxPrice !== undefined) query.price.$lte = maxPrice;
+    }
+
+    const sortOptions: any = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+      this.productModel
+        .find(query)
+        .populate('category', 'name')
+        .populate('sellerId', 'firstName lastName')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.productModel.countDocuments(query),
+    ]);
+
+    return {
+      data: products,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  async findOne(id: string): Promise<Product> {
+  async findOneProduct(id: string): Promise<Product> {
     const product = await this.productModel
       .findById(id)
       .populate('category', 'name')
