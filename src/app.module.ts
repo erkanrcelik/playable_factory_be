@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ProductsModule } from './products/products.module';
 import { AdminCategoriesModule } from './admin/categories/admin-categories.module';
 import { AdminUsersModule } from './admin/users/admin-users.module';
+import { AdminSellersModule } from './admin/sellers/admin-sellers.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import configuration from './config/configuration';
 
@@ -44,6 +45,7 @@ import configuration from './config/configuration';
     ProductsModule,
     AdminCategoriesModule,
     AdminUsersModule,
+    AdminSellersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
