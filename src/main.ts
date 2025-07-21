@@ -16,10 +16,10 @@ async function bootstrap() {
     cors({
       origin:
         process.env.NODE_ENV === 'production'
-          ? ['https://your-frontend-domain.com']
-          : ['http://localhost:3000', 'http://localhost:3001'],
+          ? ['https://ecommerce-frontend.vercel.app']
+          : ['http://localhost:3000', 'http://localhost:3002'],
       credentials: true,
-    }),
+    } as cors.CorsOptions),
   );
 
   // Global prefix
@@ -48,8 +48,15 @@ async function bootstrap() {
   const port = configService.get<number>('app.port') || 3000;
   await app.listen(port);
 
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 API Documentation: http://localhost:${port}/api-docs`);
+  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`API Documentation: http://localhost:${port}/api-docs`);
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  if (error instanceof Error) {
+    console.error('Failed to start application:', error.message);
+  } else {
+    console.error('Failed to start application:', String(error));
+  }
+  process.exit(1);
+});

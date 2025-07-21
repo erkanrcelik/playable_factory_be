@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,7 +20,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserRole } from '../schemas/user.schema';
+import { Address, User, UserRole, UserDocument } from '../schemas/user.schema';
 
 @ApiExcludeController()
 @ApiTags('Users')
@@ -37,8 +36,9 @@ export class UsersController {
     description: 'User profile retrieved successfully',
   })
   @ApiBearerAuth()
-  async getProfile(@CurrentUser() user: any) {
-    return this.usersService.findById(user.id);
+  async getProfile(@CurrentUser() user: UserDocument) {
+    const userId = String(user._id);
+    return this.usersService.findById(userId);
   }
 
   @Put('profile')
@@ -48,24 +48,36 @@ export class UsersController {
     description: 'User profile updated successfully',
   })
   @ApiBearerAuth()
-  async updateProfile(@CurrentUser() user: any, @Body() updateUserDto: any) {
-    return this.usersService.update(user.id, updateUserDto);
+  async updateProfile(
+    @CurrentUser() user: UserDocument,
+    @Body() updateUserDto: User,
+  ) {
+    const userId = String(user._id);
+    return this.usersService.update(userId, updateUserDto);
   }
 
   @Post('addresses')
   @ApiOperation({ summary: 'Add user address' })
   @ApiResponse({ status: 201, description: 'Address added successfully' })
   @ApiBearerAuth()
-  async addAddress(@CurrentUser() user: any, @Body() addressDto: any) {
-    return this.usersService.addAddress(user.id, addressDto);
+  async addAddress(
+    @CurrentUser() user: UserDocument,
+    @Body() addressDto: Address,
+  ) {
+    const userId = String(user._id);
+    return this.usersService.addAddress(userId, addressDto);
   }
 
   @Delete('addresses/:index')
   @ApiOperation({ summary: 'Remove user address' })
   @ApiResponse({ status: 200, description: 'Address removed successfully' })
   @ApiBearerAuth()
-  async removeAddress(@CurrentUser() user: any, @Param('index') index: string) {
-    return this.usersService.removeAddress(user.id, parseInt(index));
+  async removeAddress(
+    @CurrentUser() user: UserDocument,
+    @Param('index') index: string,
+  ) {
+    const userId = String(user._id);
+    return this.usersService.removeAddress(userId, parseInt(index));
   }
 
   @Put('addresses/:index')
@@ -73,15 +85,12 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Address updated successfully' })
   @ApiBearerAuth()
   async updateAddress(
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserDocument,
     @Param('index') index: string,
-    @Body() addressDto: any,
+    @Body() addressDto: Address,
   ) {
-    return this.usersService.updateAddress(
-      user.id,
-      parseInt(index),
-      addressDto,
-    );
+    const userId = String(user._id);
+    return this.usersService.updateAddress(userId, parseInt(index), addressDto);
   }
 
   @Get('sellers')

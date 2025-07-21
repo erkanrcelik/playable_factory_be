@@ -16,11 +16,11 @@ export class AppController {
   }
 
   @Get('health')
-  async getHealth() {
+  getHealth() {
     try {
-      // MongoDB bağlantısını test et
+      // Test MongoDB connection
       const dbState = this.connection.readyState;
-      const dbStatus = {
+      const dbStatus: Record<number, string> = {
         0: 'disconnected',
         1: 'connected',
         2: 'connecting',
@@ -37,10 +37,12 @@ export class AppController {
         uptime: process.uptime(),
         environment: process.env.NODE_ENV,
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       return {
         status: 'error',
-        message: error.message,
+        message: errorMessage,
         timestamp: new Date().toISOString(),
       };
     }

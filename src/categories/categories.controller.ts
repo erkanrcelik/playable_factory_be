@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../schemas/user.schema';
+import { Category } from '../schemas/category.schema';
 
 @ApiExcludeController()
 @ApiTags('Categories')
@@ -51,7 +52,7 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Create new category (Admin only)' })
   @ApiResponse({ status: 201, description: 'Category created successfully' })
   @ApiBearerAuth()
-  async create(@Body() createCategoryDto: any) {
+  async create(@Body() createCategoryDto: Partial<Category>) {
     return this.categoriesService.create(createCategoryDto);
   }
 
@@ -61,7 +62,10 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Update category (Admin only)' })
   @ApiResponse({ status: 200, description: 'Category updated successfully' })
   @ApiBearerAuth()
-  async update(@Param('id') id: string, @Body() updateCategoryDto: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: Partial<Category>,
+  ) {
     return this.categoriesService.update(id, updateCategoryDto);
   }
 

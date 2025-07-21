@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, UpdateQuery } from 'mongoose';
 import { Category, CategoryDocument } from '../schemas/category.schema';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class CategoriesService {
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
   ) {}
 
-  async create(createCategoryDto: any): Promise<Category> {
+  async create(createCategoryDto: Partial<Category>): Promise<Category> {
     const category = new this.categoryModel(createCategoryDto);
     return category.save();
   }
@@ -26,7 +26,10 @@ export class CategoriesService {
     return category;
   }
 
-  async update(id: string, updateCategoryDto: any): Promise<Category> {
+  async update(
+    id: string,
+    updateCategoryDto: UpdateQuery<CategoryDocument>,
+  ): Promise<Category> {
     const category = await this.categoryModel.findByIdAndUpdate(
       id,
       updateCategoryDto,

@@ -1,25 +1,34 @@
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
-  NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import * as bcrypt from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { User, UserDocument } from '../schemas/user.schema';
+import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import {
-  RegisterDto,
   LoginDto,
+  RegisterDto,
   RefreshTokenDto,
+  VerifyEmailDto,
   ForgotPasswordDto,
   ResetPasswordDto,
-  VerifyEmailDto,
+  Platform,
 } from './dto/auth.dto';
-import { ConfigService } from '@nestjs/config';
+import { AuthError, AuthErrorMessages } from './enums';
+import { TokenBlacklistService } from './services/token-blacklist.service';
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  role: string;
+  exp: number;
+}
 
 @Injectable()
 export class AuthService {
@@ -27,19 +36,35 @@ export class AuthService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { email, password, ...rest } = registerDto;
+    const { email, password, firstName, lastName, phoneNumber, role } =
+      registerDto;
 
     // Check if user already exists
     const existingUser = await this.userModel.findOne({ email });
     if (existingUser) {
-      throw new ConflictException('User already exists');
+      throw new ConflictException(
+        AuthErrorMessages[AuthError.USER_ALREADY_EXISTS],
+      );
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create user
+    const user = new this.userModel({
+      email,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      phoneNumber,
+      role,
+    });
+
+    await user.save();
 
     // Generate email verification token
     const emailVerificationToken = randomBytes(32).toString('hex');
@@ -47,49 +72,40 @@ export class AuthService {
       Date.now() + 24 * 60 * 60 * 1000,
     ); // 24 hours
 
-    // Create user
-    const user = new this.userModel({
-      email,
-      password: hashedPassword,
-      emailVerificationToken,
-      emailVerificationTokenExpires,
-      ...rest,
-    });
-
+    user.emailVerificationToken = emailVerificationToken;
+    user.emailVerificationTokenExpires = emailVerificationTokenExpires;
     await user.save();
 
-    // Send verification email (disabled for now)
-    // await this.sendVerificationEmail(user.email, emailVerificationToken);
+    // Send verification email
+    this.sendVerificationEmail(user.email, emailVerificationToken);
 
-    // Generate tokens
-    const tokens = await this.generateTokens(user);
-
-    return {
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        isEmailVerified: user.isEmailVerified,
-      },
-      ...tokens,
-    };
+    return { message: AuthErrorMessages[AuthError.REGISTRATION_SUCCESS] };
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const { email, password, platform } = loginDto;
 
     // Find user
     const user = await this.userModel.findOne({ email });
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(
+        AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
+      );
     }
 
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(
+        AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
+      );
+    }
+
+    // Check platform access
+    if (!this.hasPlatformAccess(user.role, platform)) {
+      throw new UnauthorizedException(
+        AuthErrorMessages[AuthError.INSUFFICIENT_PERMISSIONS],
+      );
     }
 
     // Generate tokens
@@ -110,20 +126,27 @@ export class AuthService {
 
   async refreshToken(refreshTokenDto: RefreshTokenDto) {
     try {
-      const payload = this.jwtService.verify(refreshTokenDto.refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
+      const payload = this.jwtService.verify<JwtPayload>(
+        refreshTokenDto.refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET,
+        },
+      );
 
       const user = await this.userModel.findById(payload.sub);
       if (!user) {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException(
+          AuthErrorMessages[AuthError.INVALID_REFRESH_TOKEN],
+        );
       }
 
       const tokens = await this.generateTokens(user);
 
       return tokens;
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+    } catch {
+      throw new UnauthorizedException(
+        AuthErrorMessages[AuthError.INVALID_REFRESH_TOKEN],
+      );
     }
   }
 
@@ -136,7 +159,9 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired verification token');
+      throw new BadRequestException(
+        AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_VERIFICATION_TOKEN],
+      );
     }
 
     user.isEmailVerified = true;
@@ -144,7 +169,7 @@ export class AuthService {
     user.emailVerificationTokenExpires = undefined;
     await user.save();
 
-    return { message: 'Email verified successfully' };
+    return { message: AuthErrorMessages[AuthError.EMAIL_VERIFICATION_SUCCESS] };
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -154,8 +179,7 @@ export class AuthService {
     if (!user) {
       // Don't reveal if user exists or not for security
       return {
-        message:
-          'If an account with this email exists, a password reset link has been sent',
+        message: AuthErrorMessages[AuthError.PASSWORD_RESET_EMAIL_SENT],
       };
     }
 
@@ -168,7 +192,7 @@ export class AuthService {
     await user.save();
 
     // Send password reset email
-    await this.sendPasswordResetEmail(user.email, passwordResetToken);
+    this.sendPasswordResetEmail(user.email, passwordResetToken);
 
     return {
       message:
@@ -185,7 +209,9 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException(
+        AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_RESET_TOKEN],
+      );
     }
 
     // Hash new password
@@ -196,17 +222,21 @@ export class AuthService {
     user.passwordResetTokenExpires = undefined;
     await user.save();
 
-    return { message: 'Password reset successfully' };
+    return { message: AuthErrorMessages[AuthError.PASSWORD_RESET_SUCCESS] };
   }
 
   async resendVerificationEmail(email: string) {
     const user = await this.userModel.findOne({ email });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new BadRequestException(
+        AuthErrorMessages[AuthError.USER_NOT_FOUND],
+      );
     }
 
     if (user.isEmailVerified) {
-      throw new BadRequestException('Email is already verified');
+      throw new BadRequestException(
+        AuthErrorMessages[AuthError.EMAIL_ALREADY_VERIFIED],
+      );
     }
 
     // Generate new verification token
@@ -220,9 +250,9 @@ export class AuthService {
     await user.save();
 
     // Send verification email
-    await this.sendVerificationEmail(user.email, emailVerificationToken);
+    this.sendVerificationEmail(user.email, emailVerificationToken);
 
-    return { message: 'Verification email sent successfully' };
+    return { message: AuthErrorMessages[AuthError.VERIFICATION_EMAIL_SENT] };
   }
 
   private async generateTokens(user: UserDocument) {
@@ -249,19 +279,86 @@ export class AuthService {
     };
   }
 
-  private async sendVerificationEmail(email: string, token: string) {
+  private sendVerificationEmail(email: string, token: string) {
     // This method will need to be implemented without the EmailService dependency
     // For now, it will be a placeholder or throw an error if not implemented
     console.log(`Sending verification email to ${email} with token: ${token}`);
     // Example: await this.emailService.sendVerificationEmail(email, token);
   }
 
-  private async sendPasswordResetEmail(email: string, token: string) {
+  private sendPasswordResetEmail(email: string, token: string) {
     // This method will need to be implemented without the EmailService dependency
     // For now, it will be a placeholder or throw an error if not implemented
     console.log(
       `Sending password reset email to ${email} with token: ${token}`,
     );
     // Example: await this.emailService.sendPasswordResetEmail(email, token);
+  }
+
+  async logout(userId: string, accessToken?: string, refreshToken?: string) {
+    // In a JWT-based system, logout is primarily handled on the client side
+    // by removing tokens from storage. However, we can implement additional
+    // security measures like token blacklisting or refresh token invalidation.
+
+    try {
+      // If tokens are provided, add them to blacklist
+      if (accessToken) {
+        const accessTokenPayload = this.jwtService.verify<JwtPayload>(
+          accessToken,
+          {
+            secret: process.env.JWT_SECRET,
+          },
+        );
+        await this.tokenBlacklistService.addToBlacklist(
+          accessToken,
+          userId,
+          new Date(accessTokenPayload.exp * 1000),
+        );
+      }
+
+      if (refreshToken) {
+        const refreshTokenPayload = this.jwtService.verify<JwtPayload>(
+          refreshToken,
+          {
+            secret: process.env.JWT_REFRESH_SECRET,
+          },
+        );
+        await this.tokenBlacklistService.addToBlacklist(
+          refreshToken,
+          userId,
+          new Date(refreshTokenPayload.exp * 1000),
+        );
+      }
+
+      // Update user's last logout timestamp (optional)
+      await this.userModel
+        .findByIdAndUpdate(userId, {
+          lastLogoutAt: new Date(),
+        })
+        .exec();
+
+      return { message: AuthErrorMessages[AuthError.LOGOUT_SUCCESS] };
+    } catch {
+      // If token verification fails, still return success
+      // as the client should remove tokens anyway
+      return { message: AuthErrorMessages[AuthError.LOGOUT_SUCCESS] };
+    }
+  }
+
+  private hasPlatformAccess(userRole: UserRole, platform: Platform): boolean {
+    switch (platform) {
+      case Platform.ADMIN:
+        return userRole === UserRole.ADMIN;
+      case Platform.SELLER:
+        return userRole === UserRole.SELLER || userRole === UserRole.ADMIN;
+      case Platform.CUSTOMER:
+        return (
+          userRole === UserRole.CUSTOMER ||
+          userRole === UserRole.SELLER ||
+          userRole === UserRole.ADMIN
+        );
+      default:
+        return false;
+    }
   }
 }

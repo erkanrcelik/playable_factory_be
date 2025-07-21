@@ -14,7 +14,7 @@ export class ProductsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
 
-  async create(createProductDto: any, sellerId: string): Promise<Product> {
+  async create(createProductDto: Product, sellerId: string): Promise<Product> {
     const product = new this.productModel({
       ...createProductDto,
       sellerId,
@@ -22,7 +22,7 @@ export class ProductsService {
     return product.save();
   }
 
-  async findAll(query: any = {}): Promise<Product[]> {
+  async findAll(query: Record<string, unknown> = {}): Promise<Product[]> {
     const {
       category,
       minPrice,
@@ -33,7 +33,7 @@ export class ProductsService {
       limit = 20,
     } = query;
 
-    const filter: any = { isActive: true };
+    const filter: Record<string, unknown> = { isActive: true };
 
     if (category) {
       filter.category = category;
@@ -41,8 +41,14 @@ export class ProductsService {
 
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+      if (minPrice)
+        (filter.price as Record<string, unknown>).$gte = parseFloat(
+          minPrice as string,
+        );
+      if (maxPrice)
+        (filter.price as Record<string, unknown>).$lte = parseFloat(
+          maxPrice as string,
+        );
     }
 
     if (isFeatured) {
@@ -53,18 +59,18 @@ export class ProductsService {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } },
+        { tags: { $in: [new RegExp(search as string, 'i')] } },
       ];
     }
 
-    const skip = (page - 1) * limit;
+    const skip = ((page as number) - 1) * (limit as number);
 
     return this.productModel
       .find(filter)
       .populate('category', 'name')
       .populate('sellerId', 'firstName lastName')
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(parseInt(limit as string))
       .exec();
   }
 
@@ -83,7 +89,7 @@ export class ProductsService {
 
   async update(
     id: string,
-    updateProductDto: any,
+    updateProductDto: Product,
     userId: string,
     userRole: UserRole,
   ): Promise<Product> {

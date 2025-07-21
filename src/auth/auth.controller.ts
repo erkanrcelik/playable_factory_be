@@ -6,6 +6,7 @@ import {
   Get,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -23,8 +24,14 @@ import {
   refreshTokenSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  verifyEmailSchema,
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
+import { AuthError, AuthErrorMessages } from './enums';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 /**
  * Authentication Controller
@@ -152,47 +159,48 @@ export class AuthController {
   })
   @ApiResponse({
     status: 409,
-    description: 'User with this email already exists',
+    description: AuthErrorMessages[AuthError.USER_ALREADY_EXISTS],
   })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({
     status: 429,
     description: 'Too many requests - rate limit exceeded',
   })
-  async register(@Body() registerDto: any) {
+  async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
   /**
-   * Authenticate user and generate access tokens
+   * Login user account
    *
-   * Validates user credentials and returns JWT access and refresh tokens.
-   * The access token is valid for 15 minutes, refresh token for 7 days.
+   * Authenticates a user with email and password, then generates JWT access and refresh tokens.
+   * The user must have appropriate permissions for the specified platform.
    *
-   * @param loginDto - User login credentials
-   * @returns User information with JWT tokens
+   * @param loginDto - User login credentials and platform
+   * @returns User information with JWT access and refresh tokens
    *
    * @example
    * ```json
    * {
    *   "email": "user@example.com",
-   *   "password": "securePassword123"
+   *   "password": "securePassword123",
+   *   "platform": "customer"
    * }
    * ```
    */
   @Post('login')
   @UsePipes(new ZodValidationPipe(loginSchema))
   @ApiOperation({
-    summary: 'Authenticate user and generate tokens',
+    summary: 'Login user account',
     description:
-      'Validates user credentials and returns JWT access and refresh tokens. Access token expires in 15 minutes, refresh token in 7 days.',
+      'Authenticates user with email and password. Requires platform specification (admin, seller, customer). User must have appropriate permissions for the specified platform.',
     tags: ['Authentication'],
   })
   @ApiBody({
-    description: 'User login credentials',
+    description: 'User login credentials and platform',
     schema: {
       type: 'object',
-      required: ['email', 'password'],
+      required: ['email', 'password', 'platform'],
       properties: {
         email: {
           type: 'string',
@@ -202,27 +210,36 @@ export class AuthController {
         },
         password: {
           type: 'string',
-          description: 'User password',
+          description: 'User password (minimum 6 characters)',
           example: 'securePassword123',
+        },
+        platform: {
+          type: 'string',
+          enum: ['admin', 'seller', 'customer'],
+          description: 'Platform to access (admin, seller, customer)',
+          example: 'customer',
         },
       },
     },
   })
   @ApiResponse({
     status: 200,
-    description: 'Login successful. Returns user data and JWT tokens.',
+    description: 'Login successful',
     schema: {
       type: 'object',
       properties: {
         user: {
           type: 'object',
           properties: {
-            id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-            email: { type: 'string', example: 'user@example.com' },
-            firstName: { type: 'string', example: 'John' },
-            lastName: { type: 'string', example: 'Doe' },
-            role: { type: 'string', example: 'customer' },
-            isEmailVerified: { type: 'boolean', example: true },
+            id: { type: 'string', description: 'User ID' },
+            email: { type: 'string', description: 'User email' },
+            firstName: { type: 'string', description: 'User first name' },
+            lastName: { type: 'string', description: 'User last name' },
+            role: { type: 'string', description: 'User role' },
+            isEmailVerified: {
+              type: 'boolean',
+              description: 'Email verification status',
+            },
           },
         },
         accessToken: {
@@ -236,13 +253,20 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({
+    status: 401,
+    description: AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
+  })
+  @ApiResponse({
+    status: 401,
+    description: AuthErrorMessages[AuthError.INSUFFICIENT_PERMISSIONS],
+  })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({
     status: 429,
     description: 'Too many requests - rate limit exceeded',
   })
-  async login(@Body() loginDto: any) {
+  async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
 
@@ -301,13 +325,16 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  @ApiResponse({
+    status: 401,
+    description: AuthErrorMessages[AuthError.INVALID_REFRESH_TOKEN],
+  })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({
     status: 429,
     description: 'Too many requests - rate limit exceeded',
   })
-  async refreshToken(@Body() refreshTokenDto: any) {
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto);
   }
 
@@ -358,8 +385,7 @@ export class AuthController {
       properties: {
         message: {
           type: 'string',
-          example:
-            'If an account with this email exists, a password reset link has been sent',
+          example: AuthErrorMessages[AuthError.PASSWORD_RESET_EMAIL_SENT],
         },
       },
     },
@@ -369,7 +395,7 @@ export class AuthController {
     status: 429,
     description: 'Too many requests - rate limit exceeded',
   })
-  async forgotPassword(@Body() forgotPasswordDto: any) {
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
@@ -424,16 +450,22 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Password reset successfully' },
+        message: {
+          type: 'string',
+          example: AuthErrorMessages[AuthError.PASSWORD_RESET_SUCCESS],
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
+  @ApiResponse({
+    status: 400,
+    description: AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_RESET_TOKEN],
+  })
   @ApiResponse({
     status: 429,
     description: 'Too many requests - rate limit exceeded',
   })
-  async resetPassword(@Body() resetPasswordDto: any) {
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
@@ -468,13 +500,17 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Email verified successfully' },
+        message: {
+          type: 'string',
+          example: AuthErrorMessages[AuthError.EMAIL_VERIFICATION_SUCCESS],
+        },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid or expired verification token',
+    description:
+      AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_VERIFICATION_TOKEN],
   })
   async verifyEmail(@Query('token') token: string) {
     return this.authService.verifyEmail({ token });
@@ -526,14 +562,14 @@ export class AuthController {
       properties: {
         message: {
           type: 'string',
-          example: 'Verification email sent successfully',
+          example: AuthErrorMessages[AuthError.VERIFICATION_EMAIL_SENT],
         },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Email already verified or user not found',
+    description: `${AuthErrorMessages[AuthError.EMAIL_ALREADY_VERIFIED]} or ${AuthErrorMessages[AuthError.USER_NOT_FOUND]}`,
   })
   @ApiResponse({
     status: 429,
@@ -541,5 +577,53 @@ export class AuthController {
   })
   async resendVerification(@Body() body: { email: string }) {
     return this.authService.resendVerificationEmail(body.email);
+  }
+
+  /**
+   * Logout user
+   *
+   * Logs out the current user by invalidating their session.
+   * In a JWT-based system, this primarily involves client-side token removal,
+   * but the server can also implement additional security measures.
+   *
+   * @param req - Request object containing user information
+   * @returns Success message
+   *
+   * @security This endpoint requires a valid JWT token
+   */
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Logout user',
+    description:
+      'Logs out the current user. In a JWT-based system, this primarily involves client-side token removal, but the server can implement additional security measures like token blacklisting.',
+    tags: ['Authentication'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User logged out successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: AuthErrorMessages[AuthError.LOGOUT_SUCCESS],
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  async logout(
+    @Request()
+    req: { user: { sub: string }; headers: { authorization?: string } },
+    @Body() body?: { accessToken?: string; refreshToken?: string },
+  ) {
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
+    const refreshToken = body?.refreshToken;
+
+    return this.authService.logout(req.user.sub, accessToken, refreshToken);
   }
 }

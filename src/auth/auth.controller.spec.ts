@@ -4,10 +4,10 @@ import { AuthService } from './auth.service';
 import { EmailService } from '../common/services/email.service';
 import { ConfigService } from '@nestjs/config';
 import { ThrottleAuthGuard } from '../common/guards/throttle-auth.guard';
+import { UserRole } from '../schemas/user.schema';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: AuthService;
 
   const mockAuthService = {
     register: jest.fn(),
@@ -56,7 +56,6 @@ describe('AuthController', () => {
       .compile();
 
     controller = module.get<AuthController>(AuthController);
-    authService = module.get<AuthService>(AuthService);
   });
 
   it('should be defined', () => {
@@ -70,6 +69,7 @@ describe('AuthController', () => {
         password: 'password123',
         firstName: 'Test',
         lastName: 'User',
+        role: UserRole.CUSTOMER,
       };
 
       const expectedResult = {

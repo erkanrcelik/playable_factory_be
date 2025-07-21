@@ -2,10 +2,10 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
   Body,
+  Put,
   Param,
+  Delete,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -21,7 +21,8 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserRole } from '../schemas/user.schema';
+import { UserRole, UserDocument } from '../schemas/user.schema';
+import { Product } from '../schemas/product.schema';
 
 @ApiExcludeController()
 @ApiTags('Products')
@@ -32,7 +33,7 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'Get all products with filters' })
   @ApiResponse({ status: 200, description: 'Products retrieved successfully' })
-  async findAll(@Query() query: any) {
+  async findAll(@Query() query: Record<string, unknown>) {
     return this.productsService.findAll(query);
   }
 
@@ -60,8 +61,12 @@ export class ProductsController {
   @ApiOperation({ summary: 'Create new product (Seller/Admin only)' })
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   @ApiBearerAuth()
-  async create(@Body() createProductDto: any, @CurrentUser() user: any) {
-    return this.productsService.create(createProductDto, user.id);
+  async create(
+    @Body() createProductDto: Product,
+    @CurrentUser() user: UserDocument,
+  ) {
+    const userId = String(user._id);
+    return this.productsService.create(createProductDto, userId);
   }
 
   @Put(':id')
@@ -72,15 +77,11 @@ export class ProductsController {
   @ApiBearerAuth()
   async update(
     @Param('id') id: string,
-    @Body() updateProductDto: any,
-    @CurrentUser() user: any,
+    @Body() updateProductDto: Product,
+    @CurrentUser() user: UserDocument,
   ) {
-    return this.productsService.update(
-      id,
-      updateProductDto,
-      user.id,
-      user.role,
-    );
+    const userId = String(user._id);
+    return this.productsService.update(id, updateProductDto, userId, user.role);
   }
 
   @Delete(':id')
@@ -89,8 +90,9 @@ export class ProductsController {
   @ApiOperation({ summary: 'Delete product (Seller/Admin only)' })
   @ApiResponse({ status: 200, description: 'Product deleted successfully' })
   @ApiBearerAuth()
-  async remove(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.productsService.remove(id, user.id, user.role);
+  async remove(@Param('id') id: string, @CurrentUser() user: UserDocument) {
+    const userId = String(user._id);
+    return this.productsService.remove(id, userId, user.role);
   }
 
   @Get('seller/my-products')
@@ -102,8 +104,9 @@ export class ProductsController {
     description: 'Seller products retrieved successfully',
   })
   @ApiBearerAuth()
-  async getMyProducts(@CurrentUser() user: any) {
-    return this.productsService.findBySeller(user.id);
+  async getMyProducts(@CurrentUser() user: UserDocument) {
+    const userId = String(user._id);
+    return this.productsService.findBySeller(userId);
   }
 
   @Put(':id/toggle-featured')
@@ -115,7 +118,11 @@ export class ProductsController {
     description: 'Product featured status toggled successfully',
   })
   @ApiBearerAuth()
-  async toggleFeatured(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.productsService.toggleFeatured(id, user.id, user.role);
+  async toggleFeatured(
+    @Param('id') id: string,
+    @CurrentUser() user: UserDocument,
+  ) {
+    const userId = String(user._id);
+    return this.productsService.toggleFeatured(id, userId, user.role);
   }
 }

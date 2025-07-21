@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ProductsModule } from './products/products.module';
+import { AdminCategoriesModule } from './admin/categories/admin-categories.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import configuration from './config/configuration';
 
@@ -19,14 +20,14 @@ import configuration from './config/configuration';
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('app.mongoUri'),
       }),
       inject: [ConfigService],
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         throttlers: [
           {
             ttl: configService.get<number>('app.throttle.ttl') || 60,
@@ -40,6 +41,7 @@ import configuration from './config/configuration';
     UsersModule,
     CategoriesModule,
     ProductsModule,
+    AdminCategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

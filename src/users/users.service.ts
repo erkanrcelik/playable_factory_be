@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User, UserDocument, UserRole } from '../schemas/user.schema';
+import { Address, User, UserDocument, UserRole } from '../schemas/user.schema';
 
 @Injectable()
 export class UsersService {
@@ -43,7 +43,7 @@ export class UsersService {
     return user;
   }
 
-  async addAddress(userId: string, address: any) {
+  async addAddress(userId: string, address: Address) {
     const user = await this.userModel.findByIdAndUpdate(
       userId,
       { $push: { addresses: address } },
@@ -71,7 +71,7 @@ export class UsersService {
     return user;
   }
 
-  async updateAddress(userId: string, addressIndex: number, address: any) {
+  async updateAddress(userId: string, addressIndex: number, address: Address) {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
