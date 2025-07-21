@@ -13,6 +13,7 @@ import { AdminUsersModule } from './admin/users/admin-users.module';
 import { AdminSellersModule } from './admin/sellers/admin-sellers.module';
 import { AdminCampaignsModule } from './admin/campaigns/admin-campaigns.module';
 import { SellerProductsModule } from './sellers/seller-products/seller-products.module';
+import { SellerOrdersModule } from './sellers/seller-orders/seller-orders.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { MinioService } from './common/services/minio.service';
 import configuration from './config/configuration';
@@ -51,6 +52,7 @@ import configuration from './config/configuration';
     AdminSellersModule,
     AdminCampaignsModule,
     SellerProductsModule,
+    SellerOrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService, MinioService],
