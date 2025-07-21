@@ -21,6 +21,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../schemas/user.schema';
 import { SellerError, SellerErrorMessages } from './enums/seller-error.enum';
+import { FindAllSellersDto } from './dto';
 
 /**
  * Admin Sellers Controller
@@ -212,19 +213,13 @@ export class AdminSellersController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAllSellers(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
-    @Query('search') search?: string,
-    @Query('isApproved') isApproved?: string,
-    @Query('isActive') isActive?: string,
-  ) {
+  async findAllSellers(@Query() query: FindAllSellersDto) {
     return this.adminSellersService.findAllSellers({
-      page: parseInt(page),
-      limit: parseInt(limit),
-      search,
-      isApproved: isApproved !== undefined ? isApproved === 'true' : undefined,
-      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      page: query.page || 1,
+      limit: query.limit || 10,
+      search: query.search,
+      isApproved: query.isApproved,
+      isActive: query.isActive,
     });
   }
 

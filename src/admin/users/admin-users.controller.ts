@@ -21,6 +21,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../schemas/user.schema';
 import { UserError, UserErrorMessages } from './enums/user-error.enum';
+import { FindAllCustomersDto } from './dto';
 
 /**
  * Admin Users Controller
@@ -150,17 +151,12 @@ export class AdminUsersController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAllCustomers(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
-    @Query('search') search?: string,
-    @Query('isActive') isActive?: string,
-  ) {
+  async findAllCustomers(@Query() query: FindAllCustomersDto) {
     return this.adminUsersService.findAllCustomers({
-      page: parseInt(page),
-      limit: parseInt(limit),
-      search,
-      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      page: query.page || 1,
+      limit: query.limit || 10,
+      search: query.search,
+      isActive: query.isActive,
     });
   }
 

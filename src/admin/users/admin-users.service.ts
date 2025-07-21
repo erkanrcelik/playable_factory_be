@@ -8,13 +8,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument, UserRole } from '../../schemas/user.schema';
 import { Order, OrderDocument } from '../../schemas/order.schema';
 import { UserError, UserErrorMessages } from './enums/user-error.enum';
-
-export interface FindAllCustomersOptions {
-  page: number;
-  limit: number;
-  search?: string;
-  isActive?: boolean;
-}
+import { FindAllCustomersDto } from './dto';
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -46,9 +40,9 @@ export class AdminUsersService {
   ) {}
 
   async findAllCustomers(
-    options: FindAllCustomersOptions,
+    options: FindAllCustomersDto,
   ): Promise<PaginatedResponse<User>> {
-    const { page, limit, search, isActive } = options;
+    const { page = 1, limit = 10, search, isActive } = options;
     const skip = (page - 1) * limit;
 
     // Create filter for customers only

@@ -39,6 +39,9 @@ export class Campaign {
   @Prop({ type: [Types.ObjectId], ref: 'Product', default: [] })
   products: Types.ObjectId[];
 
+  @Prop({ type: [Types.ObjectId], ref: 'Category', default: [] })
+  categories: Types.ObjectId[];
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   sellerId?: Types.ObjectId;
 
