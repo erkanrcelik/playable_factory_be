@@ -1,67 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsOptional,
-  IsString,
-  IsBoolean,
-  IsNumber,
-  Min,
-  Max,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { z } from 'zod';
 
-export class FindAllSellersDto {
-  @ApiProperty({
-    description: 'Page number',
-    example: 1,
-    required: false,
-    minimum: 1,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number;
+export const findAllSellersSchema = z.object({
+  page: z.number().min(1).optional().default(1),
+  limit: z.number().min(1).max(100).optional().default(10),
+  search: z.string().optional(),
+  isApproved: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
 
-  @ApiProperty({
-    description: 'Number of items per page',
-    example: 10,
-    required: false,
-    minimum: 1,
-    maximum: 100,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(100)
-  limit?: number;
-
-  @ApiProperty({
-    description: 'Search term for email, first name, or last name',
-    example: 'john',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  search?: string;
-
-  @ApiProperty({
-    description: 'Filter by approval status',
-    example: true,
-    required: false,
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  isApproved?: boolean;
-
-  @ApiProperty({
-    description: 'Filter by active status',
-    example: true,
-    required: false,
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  isActive?: boolean;
-}
+export type FindAllSellersDto = z.infer<typeof findAllSellersSchema>;

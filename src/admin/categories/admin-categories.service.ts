@@ -8,6 +8,7 @@ import { Model } from 'mongoose';
 import { Category, CategoryDocument } from '../../schemas/category.schema';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { CategoryError, CategoryErrorMessages } from './enums';
+import { MinioService } from '../../common/services/minio.service';
 
 export interface FindAllOptions {
   page: number;
@@ -28,6 +29,7 @@ export interface PaginatedResponse<T> {
 export class AdminCategoriesService {
   constructor(
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    private readonly minioService: MinioService,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
@@ -184,5 +186,58 @@ export class AdminCategoriesService {
       active,
       inactive: total - active,
     };
+  }
+
+  async uploadCategoryImage(
+    categoryId: string,
+    file: Express.Multer.File,
+  ): Promise<{ imageUrl: string; imageKey: string }> {
+    // Kategori var mı kontrol et
+    const category = await this.findOne(categoryId);
+    if (!category) {
+      throw new NotFoundException(
+        CategoryErrorMessages[CategoryError.CATEGORY_NOT_FOUND],
+      );
+    }
+
+    // Dosya tipini kontrol et
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are allowed');
+    }
+
+    // Dosya boyutunu kontrol et (5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size must be less than 5MB');
+    }
+
+    try {
+      // Eski resmi sil (varsa)
+      if (category.image) {
+        try {
+          await this.minioService.deleteFile(category.image);
+        } catch {
+          // Eski dosya silinmezse hata verme, devam et
+        }
+      }
+
+      // Yeni resmi yükle
+      const uploadResult = await this.minioService.uploadFile(
+        file,
+        'categories',
+      );
+
+      // Kategoriyi güncelle
+      await this.categoryModel.findByIdAndUpdate(categoryId, {
+        image: uploadResult.key,
+      });
+
+      return {
+        imageUrl: uploadResult.url,
+        imageKey: uploadResult.key,
+      };
+    } catch {
+      throw new BadRequestException('Failed to upload image');
+    }
   }
 }

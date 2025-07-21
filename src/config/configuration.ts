@@ -15,6 +15,17 @@ export default registerAs('app', () => ({
     path: process.env.UPLOAD_PATH || './uploads',
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
   },
+  minio: {
+    endpoint: process.env.MINIO_ENDPOINT || 'localhost',
+    port: parseInt(process.env.MINIO_PORT || '9000', 10),
+    useSSL: process.env.MINIO_USE_SSL === 'true',
+    accessKey: process.env.MINIO_ROOT_USER || 'minioadmin',
+    secretKey: process.env.MINIO_ROOT_PASSWORD || 'gkb61hofnu1dv4sz',
+    bucket: process.env.MINIO_BUCKET || 'ecommerce',
+    region: process.env.MINIO_REGION || 'us-east-1',
+    browserRedirectUrl: process.env.MINIO_BROWSER_REDIRECT_URL || '',
+    browserRedirect: process.env.MINIO_BROWSER_REDIRECT === 'true',
+  },
   throttle: {
     ttl: parseInt(process.env.THROTTLE_TTL || '60', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT || '100', 10),

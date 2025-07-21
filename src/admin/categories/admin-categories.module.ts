@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Category, CategorySchema } from '../../schemas/category.schema';
 import { AdminCategoriesController } from './admin-categories.controller';
 import { AdminCategoriesService } from './admin-categories.service';
+import { MinioService } from '../../common/services/minio.service';
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { AdminCategoriesService } from './admin-categories.service';
     ]),
   ],
   controllers: [AdminCategoriesController],
-  providers: [AdminCategoriesService],
+  providers: [AdminCategoriesService, MinioService],
   exports: [AdminCategoriesService],
 })
 export class AdminCategoriesModule {}

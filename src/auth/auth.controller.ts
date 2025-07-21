@@ -14,6 +14,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -30,8 +31,11 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
+
 import { AuthError, AuthErrorMessages } from './enums';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserDocument } from '../schemas/user.schema';
 
 /**
  * Authentication Controller
@@ -625,5 +629,37 @@ export class AuthController {
     const refreshToken = body?.refreshToken;
 
     return this.authService.logout(req.user.sub, accessToken, refreshToken);
+  }
+
+  /**
+   * Get current user information
+   *
+   * Retrieves the current user's information based on the JWT token.
+   * This endpoint is available to all authenticated users (ADMIN, SELLER, CUSTOMER).
+   *
+   * @param user - Current user from JWT token
+   * @returns User information without password
+   *
+   * @security This endpoint requires a valid JWT token
+   */
+  @Get('user-info')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get current user information',
+    description:
+      "Retrieves the current user's information based on the JWT token. Available to all authenticated users (ADMIN, SELLER, CUSTOMER).",
+    tags: ['Authentication'],
+  })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'User information retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  async getUserInfo(@CurrentUser() user: UserDocument) {
+    return this.authService.getUserInfo(String(user._id));
   }
 }

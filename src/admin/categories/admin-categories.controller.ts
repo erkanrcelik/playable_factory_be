@@ -8,6 +8,10 @@ import {
   Param,
   UseGuards,
   Query,
+  UsePipes,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,13 +19,21 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../schemas/user.schema';
 import { AdminCategoriesService } from './admin-categories.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+  createCategorySchema,
+  updateCategorySchema,
+} from './dto';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @ApiTags('Admin - Categories')
 @Controller('admin/categories')
@@ -34,6 +46,7 @@ export class AdminCategoriesController {
   ) {}
 
   @Post()
+  @UsePipes(new ZodValidationPipe(createCategorySchema))
   @ApiOperation({ summary: 'Create new category' })
   @ApiResponse({
     status: 201,
@@ -106,6 +119,7 @@ export class AdminCategoriesController {
   }
 
   @Put(':id')
+  @UsePipes(new ZodValidationPipe(updateCategorySchema))
   @ApiOperation({ summary: 'Update category' })
   @ApiResponse({
     status: 200,
@@ -148,6 +162,40 @@ export class AdminCategoriesController {
   })
   async toggleStatus(@Param('id') id: string) {
     return this.adminCategoriesService.toggleStatus(id);
+  }
+
+  @Post(':id/upload-image')
+  @UseInterceptors(FileInterceptor('image'))
+  @UsePipes(new ZodValidationPipe(createCategorySchema))
+  @ApiOperation({ summary: 'Upload category image' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 201,
+    description: 'Category image uploaded successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        imageUrl: { type: 'string', description: 'Image URL' },
+        imageKey: { type: 'string', description: 'Image key in storage' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid file type or size',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found',
+  })
+  async uploadCategoryImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Image file is required');
+    }
+    return this.adminCategoriesService.uploadCategoryImage(id, file);
   }
 
   @Get('stats/overview')

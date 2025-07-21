@@ -10,6 +10,7 @@ import {
   UseGuards,
   ParseIntPipe,
   DefaultValuePipe,
+  UsePipes,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +19,6 @@ import {
   ApiQuery,
   ApiParam,
   ApiBearerAuth,
-  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -26,9 +26,15 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../schemas/user.schema';
 import { AdminCampaignsService } from './admin-campaigns.service';
 import { CampaignWithDetails, CampaignStats } from './admin-campaigns.service';
-import { CreatePlatformCampaignDto, UpdatePlatformCampaignDto } from './dto';
+import {
+  CreatePlatformCampaignDto,
+  UpdatePlatformCampaignDto,
+  createPlatformCampaignSchema,
+  updatePlatformCampaignSchema,
+} from './dto';
 import { CampaignErrorMessages } from './enums/campaign-error.enum';
 import { CampaignType, DiscountType } from '../../schemas/campaign.schema';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @ApiTags('Admin Campaigns')
 @Controller('admin/campaigns')
@@ -39,12 +45,12 @@ export class AdminCampaignsController {
   constructor(private readonly adminCampaignsService: AdminCampaignsService) {}
 
   @Post('platform')
+  @UsePipes(new ZodValidationPipe(createPlatformCampaignSchema))
   @ApiOperation({
     summary: 'Create platform campaign',
     description:
       'Create a new platform campaign with products and/or categories',
   })
-  @ApiBody({ type: CreatePlatformCampaignDto })
   @ApiResponse({
     status: 201,
     description: 'Campaign created successfully',
@@ -295,6 +301,7 @@ export class AdminCampaignsController {
   }
 
   @Put(':id')
+  @UsePipes(new ZodValidationPipe(updatePlatformCampaignSchema))
   @ApiOperation({
     summary: 'Update campaign',
     description: 'Update an existing campaign',
@@ -304,7 +311,6 @@ export class AdminCampaignsController {
     description: 'Campaign ID',
     example: '507f1f77bcf86cd799439011',
   })
-  @ApiBody({ type: UpdatePlatformCampaignDto })
   @ApiResponse({
     status: 200,
     description: 'Campaign updated successfully',

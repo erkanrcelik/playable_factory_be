@@ -13,6 +13,7 @@ import { AdminUsersModule } from './admin/users/admin-users.module';
 import { AdminSellersModule } from './admin/sellers/admin-sellers.module';
 import { AdminCampaignsModule } from './admin/campaigns/admin-campaigns.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { MinioService } from './common/services/minio.service';
 import configuration from './config/configuration';
 
 @Module({
@@ -50,7 +51,7 @@ import configuration from './config/configuration';
     AdminCampaignsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, MinioService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
