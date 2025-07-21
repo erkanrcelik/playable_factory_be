@@ -43,18 +43,32 @@ export interface SellerWithProfile {
   profile: {
     _id: string;
     storeName: string;
-    storeDescription?: string;
-    isApproved: boolean;
-    logo?: string;
-    banner?: string;
-    businessCategories: string[];
-    contactEmail?: string;
-    contactPhone?: string;
+    description?: string;
+    isActive: boolean;
+    logoUrl?: string;
+    phoneNumber?: string;
     website?: string;
-    socialMedia: {
+    address?: {
+      street: string;
+      city: string;
+      state: string;
+      country: string;
+      postalCode: string;
+    };
+    businessHours?: {
+      monday?: { open?: string; close?: string; closed: boolean };
+      tuesday?: { open?: string; close?: string; closed: boolean };
+      wednesday?: { open?: string; close?: string; closed: boolean };
+      thursday?: { open?: string; close?: string; closed: boolean };
+      friday?: { open?: string; close?: string; closed: boolean };
+      saturday?: { open?: string; close?: string; closed: boolean };
+      sunday?: { open?: string; close?: string; closed: boolean };
+    };
+    socialMedia?: {
       facebook?: string;
       instagram?: string;
       twitter?: string;
+      linkedin?: string;
     };
     createdAt: Date;
     updatedAt: Date;
@@ -124,7 +138,7 @@ export class AdminSellersService {
     // Create a map for quick lookup
     const profileMap = new Map();
     profiles.forEach((profile) => {
-      profileMap.set((profile.userId as any).toString(), profile);
+      profileMap.set((profile.sellerId as any).toString(), profile);
     });
 
     // Combine sellers with their profiles
@@ -215,14 +229,13 @@ export class AdminSellersService {
         ? {
             _id: (profile._id as any).toString(),
             storeName: profile.storeName,
-            storeDescription: profile.storeDescription,
-            isApproved: profile.isApproved,
-            logo: profile.logo,
-            banner: profile.banner,
-            businessCategories: profile.businessCategories,
-            contactEmail: profile.contactEmail,
-            contactPhone: profile.contactPhone,
+            description: profile.description,
+            isActive: profile.isActive,
+            logoUrl: profile.logoUrl,
+            phoneNumber: profile.phoneNumber,
             website: profile.website,
+            address: profile.address,
+            businessHours: profile.businessHours,
             socialMedia: profile.socialMedia,
             createdAt: (profile as any).createdAt,
             updatedAt: (profile as any).updatedAt,
@@ -252,7 +265,7 @@ export class AdminSellersService {
       );
     }
 
-    profile.isApproved = true;
+    profile.isActive = true;
     await profile.save();
 
     return this.findSellerById(id);
@@ -279,7 +292,7 @@ export class AdminSellersService {
       );
     }
 
-    profile.isApproved = false;
+    profile.isActive = false;
     await profile.save();
 
     return this.findSellerById(id);

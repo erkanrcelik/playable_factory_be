@@ -10,7 +10,7 @@ export enum CampaignType {
 
 export enum DiscountType {
   PERCENTAGE = 'percentage',
-  FIXED = 'fixed',
+  AMOUNT = 'amount',
 }
 
 @Schema({ timestamps: true })
@@ -37,16 +37,25 @@ export class Campaign {
   isActive: boolean;
 
   @Prop({ type: [Types.ObjectId], ref: 'Product', default: [] })
-  products: Types.ObjectId[];
+  productIds: Types.ObjectId[];
 
   @Prop({ type: [Types.ObjectId], ref: 'Category', default: [] })
-  categories: Types.ObjectId[];
+  categoryIds: Types.ObjectId[];
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   sellerId?: Types.ObjectId;
 
   @Prop()
   description?: string;
+
+  @Prop()
+  imageUrl?: string;
+
+  @Prop({ type: Number })
+  maxUsage?: number;
+
+  @Prop({ type: Number, default: 0 })
+  minOrderAmount?: number;
 }
 
 export const CampaignSchema = SchemaFactory.createForClass(Campaign);

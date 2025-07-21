@@ -169,12 +169,12 @@ export class AdminCampaignsService {
     const data: CampaignWithDetails[] = await Promise.all(
       campaigns.map(async (campaign) => {
         const products = await this.productModel
-          .find({ _id: { $in: campaign.products } })
+          .find({ _id: { $in: campaign.productIds } })
           .populate('sellerId', 'firstName lastName')
           .exec();
 
         const categories = await this.categoryModel
-          .find({ _id: { $in: campaign.categories } })
+          .find({ _id: { $in: campaign.categoryIds } })
           .exec();
 
         return {
@@ -225,12 +225,12 @@ export class AdminCampaignsService {
     }
 
     const products = await this.productModel
-      .find({ _id: { $in: campaign.products } })
+              .find({ _id: { $in: campaign.productIds } })
       .populate('sellerId', 'firstName lastName')
       .exec();
 
     const categories = await this.categoryModel
-      .find({ _id: { $in: campaign.categories } })
+              .find({ _id: { $in: campaign.categoryIds } })
       .exec();
 
     return {
@@ -324,8 +324,8 @@ export class AdminCampaignsService {
         id,
         {
           ...updateDto,
-          products: updateDto.productIds || campaign.products,
-          categories: updateDto.categoryIds || campaign.categories,
+          productIds: updateDto.productIds || campaign.productIds,
+          categoryIds: updateDto.categoryIds || campaign.categoryIds,
         },
         { new: true },
       )
