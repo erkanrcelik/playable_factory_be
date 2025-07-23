@@ -131,7 +131,7 @@ export class RecommendationsController {
   @Get('my-most-viewed')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-    summary: 'Get user\'s most viewed products',
+    summary: "Get user's most viewed products",
     description: 'Get products that the user has viewed most frequently',
   })
   @ApiQuery({

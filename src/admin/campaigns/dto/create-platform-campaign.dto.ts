@@ -11,6 +11,7 @@ export const createPlatformCampaignSchema = z
     endDate: z.string().pipe(z.coerce.date()),
     productIds: z.array(z.string()).optional(),
     categoryIds: z.array(z.string()).optional(),
+    imageUrl: z.string().optional(),
   })
   .refine(
     (data) => {

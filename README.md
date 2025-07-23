@@ -282,128 +282,126 @@ MINIO_USE_SSL=false               # SSL configuration
 
 ## Database Seeding
 
-### Basic Seeding Script
-Create a seeding script to populate the database with initial data:
+### Comprehensive Seeding System
+The project includes a complete seeding system with multiple scripts for different data types:
 
-```typescript
-// scripts/seed.ts
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { CategoriesService } from '../src/categories/categories.service';
-
-async function seed() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-
-  const usersService = app.get(UsersService);
-  const categoriesService = app.get(CategoriesService);
-
-  // Create demo users
-  await usersService.create({
-    email: 'admin@playablefactory.com',
-    password: 'admin123',
-    role: 'ADMIN',
-    firstName: 'Admin',
-    lastName: 'User'
-  });
-
-  await usersService.create({
-    email: 'seller@playablefactory.com',
-    password: 'seller123',
-    role: 'SELLER',
-    firstName: 'Demo',
-    lastName: 'Seller'
-  });
-
-  await usersService.create({
-    email: 'customer@playablefactory.com',
-    password: 'customer123',
-    role: 'CUSTOMER',
-    firstName: 'Demo',
-    lastName: 'Customer'
-  });
-
-  // Create demo categories
-  await categoriesService.create({
-    name: 'Electronics',
-    description: 'Electronic devices and gadgets'
-  });
-
-  await categoriesService.create({
-    name: 'Clothing',
-    description: 'Fashion and apparel'
-  });
-
-  console.log('Database seeded successfully!');
-  await app.close();
-}
-
-seed().catch(console.error);
-```
-
-Run the seeding script:
+#### Available Seeding Scripts
 ```bash
-npm run seed
+# Create categories with MinIO image upload
+npm run create-categories
+
+# Create sellers, customers, products, and reviews with MinIO image upload
+npm run create-sellers-products
+
+# Create platform campaigns (admin campaigns for each category)
+npm run create-platform-campaigns
+
+# Create seller campaigns
+npm run create-seller-campaigns
+
+# Run all seeding scripts in sequence
+npm run seed-all
 ```
+
+#### Master Seeding Script
+The `seed-all` command runs all scripts in the correct order:
+1. **Categories** - Creates 8 main categories with MinIO images
+2. **Sellers & Products** - Creates 5 sellers, 5 customers, 80 products, and 160-240 reviews
+3. **Platform Campaigns** - Creates 8 platform-wide campaigns (one per category)
+4. **Seller Campaigns** - Creates seller-specific campaigns
+
+#### Data Structure Created
+- **8 Categories**: Electronics, Clothing, Home and Garden, Sports, Books, Health and Beauty, Toys, Food
+- **5 Sellers**: TechMart, Fashion House, Home Plus, Sports World, Lifestyle Store
+- **5 Customers**: For review creation
+- **80 Products**: 16 products per seller across all categories
+- **160-240 Reviews**: 2-3 reviews per product
+- **8 Platform Campaigns**: One campaign per category
+- **All Images**: Uploaded to MinIO storage
+
+#### Script Features
+- **Error Handling**: Scripts continue even if some images fail to download
+- **Duplicate Prevention**: Checks for existing data before creation
+- **MinIO Integration**: All images are uploaded to MinIO storage
+- **Realistic Data**: Products include specifications, variants, and tags
+- **Review System**: Each product gets 2-3 realistic reviews from customers
+
+#### Usage
+```bash
+# Quick setup - run all scripts
+npm run seed-all
+
+# Or run individual scripts
+npm run create-categories
+npm run create-sellers-products
+npm run create-platform-campaigns
+npm run create-seller-campaigns
+```
+
+#### Data Files
+The seeding system uses organized data files in `scripts/data/`:
+- `customers.ts` - Customer data for reviews
+- `sellers.ts` - Seller profiles and information
+- `products.ts` - Product data organized by category
 
 ## Features List
 
 ### Core Features
-- ✅ Multi-role authentication system (Customer, Seller, Admin)
-- ✅ JWT-based authentication with refresh tokens
-- ✅ Role-based access control (RBAC)
-- ✅ User profile management
-- ✅ Address management for users
+-  Multi-role authentication system (Customer, Seller, Admin)
+-  JWT-based authentication with refresh tokens
+-  Role-based access control (RBAC)
+-  User profile management
+-  Address management for users
 
 ### Product Management
-- ✅ Complete CRUD operations for products
-- ✅ Product image upload with MinIO
-- ✅ Product categorization
-- ✅ Product search and filtering
-- ✅ Product reviews and ratings
+-  Complete CRUD operations for products
+-  Product image upload with MinIO
+-  Product categorization
+-  Product search and filtering
+-  Product reviews and ratings
 
 ### Seller Features
-- ✅ Seller profile management
-- ✅ Product management for sellers
-- ✅ Order management for sellers
-- ✅ Campaign creation and management
-- ✅ Seller dashboard with statistics
-- ✅ Public seller API for customer access
+-  Seller profile management
+-  Product management for sellers
+-  Order management for sellers
+-  Campaign creation and management
+-  Seller dashboard with statistics
+-  Public seller API for customer access
 
 ### Customer Features
-- ✅ Product browsing and search
-- ✅ Shopping cart functionality
-- ✅ Order placement and tracking
-- ✅ Product reviews and ratings
-- ✅ Wishlist management
-- ✅ Address management
+-  Product browsing and search
+-  Shopping cart functionality
+-  Order placement and tracking
+-  Product reviews and ratings
+-  Wishlist management
+-  Address management
 
 ### Admin Features
-- ✅ User management
-- ✅ Seller approval and management
-- ✅ Product moderation
-- ✅ Order management
-- ✅ Campaign management
-- ✅ Platform statistics dashboard
+-  User management
+-  Seller approval and management
+-  Product moderation
+-  Order management
+-  Campaign management
+-  Platform statistics dashboard
 
 ### Advanced Features
-- ✅ Redis-based caching
-- ✅ Vector similarity for recommendations
-- ✅ Advanced search functionality
-- ✅ File upload with MinIO
-- ✅ Email notifications
-- ✅ Pagination and filtering
-- ✅ Error handling and logging
-- ✅ Input validation with Zod
-- ✅ Comprehensive JSDoc documentation
+-  Redis-based caching
+-  Vector similarity for recommendations
+-  Advanced search functionality
+-  File upload with MinIO
+-  Email notifications
+-  Pagination and filtering
+-  Error handling and logging
+-  Input validation with Zod
+-  Comprehensive JSDoc documentation
 
 ### Bonus Features
-- ✅ Public seller API endpoints
-- ✅ Automatic review approval system
-- ✅ Comprehensive error handling
-- ✅ Internationalization support
-- ✅ Performance optimization
-- ✅ Security enhancements
+-  Public seller API endpoints
+-  Automatic review approval system
+-  Comprehensive error handling
+-  Internationalization support
+-  Performance optimization
+-  Security enhancements
 
 ## Deployment Guide
 

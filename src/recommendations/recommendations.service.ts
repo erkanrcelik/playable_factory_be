@@ -73,7 +73,9 @@ export class RecommendationsService {
         }
       } else if (activityType === 'purchase') {
         // Satın alınan ürünlere ekle
-        if (!activity.purchasedProducts.includes(new Types.ObjectId(productId))) {
+        if (
+          !activity.purchasedProducts.includes(new Types.ObjectId(productId))
+        ) {
           activity.purchasedProducts.push(new Types.ObjectId(productId));
         }
       }
@@ -453,7 +455,7 @@ export class RecommendationsService {
       // Sıralamayı koru
       const productMap = new Map();
       products.forEach((product) => {
-        productMap.set((product._id as any).toString(), product);
+        productMap.set(product._id.toString(), product);
       });
 
       products = topProductIds
@@ -461,7 +463,7 @@ export class RecommendationsService {
           const product = productMap.get(id);
           if (product) {
             const productObj = product.toObject();
-            (productObj as any).frequency = productCounts[id];
+            productObj.frequency = productCounts[id];
             return productObj;
           }
           return null;
@@ -489,7 +491,7 @@ export class RecommendationsService {
 
         products = products.map((product) => {
           const productObj = product.toObject();
-          (productObj as any).frequency = 0;
+          productObj.frequency = 0;
           return productObj;
         });
       } else {
@@ -513,7 +515,8 @@ export class RecommendationsService {
     allActivities.forEach((activity) => {
       activity.viewedProducts.forEach((productId) => {
         const productIdStr = productId.toString();
-        productViewCounts[productIdStr] = (productViewCounts[productIdStr] || 0) + 1;
+        productViewCounts[productIdStr] =
+          (productViewCounts[productIdStr] || 0) + 1;
       });
     });
 
@@ -535,7 +538,7 @@ export class RecommendationsService {
       // Popülerlik sırasını koru
       const productMap = new Map();
       products.forEach((product) => {
-        productMap.set((product._id as any).toString(), product);
+        productMap.set(product._id.toString(), product);
       });
 
       products = popularProductIds
@@ -543,7 +546,7 @@ export class RecommendationsService {
           const product = productMap.get(id.toString());
           if (product) {
             const productObj = product.toObject();
-            (productObj as any).popularity = productViewCounts[id.toString()];
+            productObj.popularity = productViewCounts[id.toString()];
             return productObj;
           }
           return null;
@@ -559,11 +562,11 @@ export class RecommendationsService {
         .limit(limit)
         .exec();
 
-              products = products.map((product) => {
-          const productObj = product.toObject();
-          (productObj as any).popularity = 0;
-          return productObj;
-        });
+      products = products.map((product) => {
+        const productObj = product.toObject();
+        productObj.popularity = 0;
+        return productObj;
+      });
     }
 
     return products;
@@ -644,7 +647,8 @@ export class RecommendationsService {
       const categoryName = (product.category as any)?.name || 'other';
       const categoryIndex = topCategories.indexOf(categoryName);
       (productObj as any).lastViewed = new Date().toISOString(); // Şimdilik şu anki zaman
-      (productObj as any).categoryRelevance = categoryIndex >= 0 ? 1 - (categoryIndex * 0.2) : 0;
+      (productObj as any).categoryRelevance =
+        categoryIndex >= 0 ? 1 - categoryIndex * 0.2 : 0;
       return productObj;
     });
   }
@@ -695,7 +699,7 @@ export class RecommendationsService {
         const product = productMap.get(id.toString());
         if (product) {
           const productObj = product.toObject();
-          (productObj as any).viewCount = viewCounts[id.toString()];
+          productObj.viewCount = viewCounts[id.toString()];
           return productObj;
         }
         return null;

@@ -11,6 +11,7 @@ export const updatePlatformCampaignSchema = z.object({
   productIds: z.array(z.string()).optional(),
   categoryIds: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
+  imageUrl: z.string().optional(),
 });
 
 export type UpdatePlatformCampaignDto = z.infer<

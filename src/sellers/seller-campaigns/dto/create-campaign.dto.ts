@@ -41,6 +41,7 @@ export const createCampaignSchema = z
       .number()
       .min(0, 'Minimum order amount cannot be negative')
       .optional(),
+    imageUrl: z.string().optional(),
   })
   .refine(
     (data) => {

@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectMinio } from 'src/minio/minio.decorator';
+import { InjectMinio } from './minio.decorator';
 import * as Minio from 'minio';
 import { randomUUID } from 'crypto';
 

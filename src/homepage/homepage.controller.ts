@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -86,7 +93,8 @@ export class HomepageController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Get homepage data with personalized recommendations',
-    description: 'Retrieve homepage data including personalized recommendations for authenticated users',
+    description:
+      'Retrieve homepage data including personalized recommendations for authenticated users',
   })
   @ApiResponse({
     status: 200,

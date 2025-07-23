@@ -129,8 +129,8 @@ export class AdminCampaignsService {
     const campaign = new this.campaignModel({
       ...createDto,
       type: CampaignType.PLATFORM,
-      products: createDto.productIds || [],
-      categories: createDto.categoryIds || [],
+      productIds: createDto.productIds || [],
+      categoryIds: createDto.categoryIds || [],
     });
 
     const savedCampaign = await campaign.save();

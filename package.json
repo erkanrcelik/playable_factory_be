@@ -18,7 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "ts-node src/seed.ts"
+    "seed": "ts-node src/seed.ts",
+    "create-categories": "ts-node scripts/create-categories.ts",
+    "create-sellers-products": "ts-node scripts/create-sellers-and-products.ts",
+    "create-platform-campaigns": "ts-node scripts/create-platform-campaigns.ts",
+    "create-seller-campaigns": "ts-node scripts/create-seller-campaigns.ts",
+    "seed-all": "ts-node scripts/seed-all.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",

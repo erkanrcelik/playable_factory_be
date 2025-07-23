@@ -41,6 +41,7 @@ export const updateCampaignSchema = z.object({
     .number()
     .min(0, 'Minimum order amount cannot be negative')
     .optional(),
+  imageUrl: z.string().optional(),
 });
 
 export type UpdateCampaignDto = z.infer<typeof updateCampaignSchema>;

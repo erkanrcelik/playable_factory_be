@@ -85,7 +85,8 @@ export class CartService {
     // Update cart items with latest product information
     const updatedItems = await Promise.all(
       cart.items.map(async (item) => {
-        const product = await this.productModel.findById(item.productId)
+        const product = await this.productModel
+          .findById(item.productId)
           .populate('category', 'name')
           .populate('sellerId', 'firstName lastName')
           .exec();
@@ -96,9 +97,12 @@ export class CartService {
 
         // Calculate discount
         const discountedPrice = await this.getDiscountedPrice(product);
-        const hasDiscount = discountedPrice !== null && discountedPrice < product.price;
+        const hasDiscount =
+          discountedPrice !== null && discountedPrice < product.price;
         const discountPercentage = hasDiscount
-          ? Math.round(((product.price - discountedPrice) / product.price) * 100)
+          ? Math.round(
+              ((product.price - discountedPrice) / product.price) * 100,
+            )
           : 0;
 
         return {
@@ -110,7 +114,10 @@ export class CartService {
             _id: (product.category as any)?._id?.toString() || '',
             name: (product.category as any)?.name || '',
           },
-          sellerId: (product.sellerId as any)?._id?.toString() || product.sellerId?.toString() || '',
+          sellerId:
+            (product.sellerId as any)?._id?.toString() ||
+            product.sellerId?.toString() ||
+            '',
           sellerName: `${(product.sellerId as any)?.firstName || ''} ${(product.sellerId as any)?.lastName || ''}`,
           stock: product.stock || 0,
           hasDiscount,
@@ -133,7 +140,8 @@ export class CartService {
     const { productId, quantity } = addToCartDto;
 
     // Validate product exists and is active
-    const product = await this.productModel.findById(productId)
+    const product = await this.productModel
+      .findById(productId)
       .populate('category', 'name')
       .populate('sellerId', 'firstName lastName')
       .exec();
@@ -177,7 +185,10 @@ export class CartService {
           _id: (product.category as any)?._id?.toString() || '',
           name: (product.category as any)?.name || '',
         },
-        sellerId: (product.sellerId as any)?._id?.toString() || product.sellerId?.toString() || '',
+        sellerId:
+          (product.sellerId as any)?._id?.toString() ||
+          product.sellerId?.toString() ||
+          '',
         sellerName: `${(product.sellerId as any)?.firstName || ''} ${(product.sellerId as any)?.lastName || ''}`,
         stock: product.stock || 0,
         hasDiscount: false, // Will be calculated later
@@ -217,7 +228,8 @@ export class CartService {
     }
 
     // Validate product stock
-    const product = await this.productModel.findById(productId)
+    const product = await this.productModel
+      .findById(productId)
       .populate('category', 'name')
       .populate('sellerId', 'firstName lastName')
       .exec();
@@ -430,10 +442,10 @@ export class CartService {
   ): number {
     let applicableItems: CartItem[] = [];
 
-    if (campaign.type === ('platform' as any)) {
+    if (campaign.type === 'platform') {
       // Platform campaigns apply to all products
       applicableItems = items;
-    } else if (campaign.type === ('seller' as any)) {
+    } else if (campaign.type === 'seller') {
       // Seller campaigns apply only to seller's products
       applicableItems = items.filter((item) =>
         campaign.productIds.includes(item.productId),
@@ -581,17 +593,19 @@ export class CartService {
       // If cart has items, get frequently bought together for first item
       if (cart.items.length > 0) {
         const firstProductId = cart.items[0].productId;
-        frequentlyBoughtTogether = await this.recommendationsService.getFrequentlyBoughtTogether(
-          firstProductId,
-          limit,
-        );
+        frequentlyBoughtTogether =
+          await this.recommendationsService.getFrequentlyBoughtTogether(
+            firstProductId,
+            limit,
+          );
       }
 
       // Get personalized recommendations
-      personalized = await this.recommendationsService.getPersonalizedRecommendations(
-        userId,
-        limit,
-      );
+      personalized =
+        await this.recommendationsService.getPersonalizedRecommendations(
+          userId,
+          limit,
+        );
 
       // Get popular products
       popular = await this.recommendationsService.getPopularProducts(limit);

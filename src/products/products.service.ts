@@ -93,7 +93,22 @@ export class ProductsService {
 
     // Satıcı filtresi
     if (seller) {
-      query.sellerId = new Types.ObjectId(seller);
+      console.log('Seller filter applied:', seller);
+      try {
+        query.sellerId = new Types.ObjectId(seller);
+        console.log('Query with seller:', JSON.stringify(query));
+
+
+      } catch (error) {
+        console.error('Invalid ObjectId:', seller, error);
+        return {
+          data: [],
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        };
+      }
     }
 
     // Aktif ürün filtresi
@@ -135,6 +150,10 @@ export class ProductsService {
 
     const skip = (page - 1) * limit;
 
+    console.log('Final query:', JSON.stringify(query));
+    console.log('Sort options:', JSON.stringify(sortOptions));
+    console.log('Skip:', skip, 'Limit:', limit);
+
     const [products, total] = await Promise.all([
       this.productModel
         .find(query)
@@ -146,6 +165,9 @@ export class ProductsService {
         .lean(),
       this.productModel.countDocuments(query),
     ]);
+
+    console.log('Found products:', products.length);
+    console.log('Total count:', total);
 
     // Kampanyalı fiyatları ve indirim bilgilerini ekle
     const productsWithDiscount = await Promise.all(

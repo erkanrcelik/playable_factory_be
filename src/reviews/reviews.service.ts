@@ -198,7 +198,7 @@ export class ReviewsService {
       userId: new Types.ObjectId(userId),
       rating,
       comment,
-      isApproved: true, // Reviews are automatically approved
+      isApproved: false, // Reviews require admin approval
     });
 
     await review.save();
@@ -238,7 +238,7 @@ export class ReviewsService {
     const updatedReview = await this.reviewModel
       .findByIdAndUpdate(
         reviewId,
-        { ...updateReviewDto, isApproved: true }, // Keep approved status
+        { ...updateReviewDto, isApproved: false }, // Reset approval status after update
         { new: true },
       )
       .populate('productId', 'name imageUrls')
@@ -274,7 +274,6 @@ export class ReviewsService {
 
   /**
    * Approve review (admin only)
-   * Note: Currently reviews are auto-approved, this method is kept for future use
    */
   async approveReview(reviewId: string) {
     const review = await this.reviewModel.findById(reviewId).exec();
@@ -297,7 +296,6 @@ export class ReviewsService {
 
   /**
    * Reject review (admin only)
-   * Note: Currently reviews are auto-approved, this method is kept for future use
    */
   async rejectReview(reviewId: string) {
     const review = await this.reviewModel.findById(reviewId).exec();

@@ -334,7 +334,6 @@ async function seed() {
     description: 'Moda ve giyim'
   });
 
-  console.log('Veritabanı başarıyla dolduruldu!');
   await app.close();
 }
 
@@ -349,61 +348,61 @@ npm run seed
 ## Özellikler Listesi
 
 ### Temel Özellikler
-- ✅ Çok rollü kimlik doğrulama sistemi (Müşteri, Satıcı, Admin)
-- ✅ Refresh token'larla JWT tabanlı kimlik doğrulama
-- ✅ Rol tabanlı erişim kontrolü (RBAC)
-- ✅ Kullanıcı profil yönetimi
-- ✅ Kullanıcılar için adres yönetimi
+-  Çok rollü kimlik doğrulama sistemi (Müşteri, Satıcı, Admin)
+-  Refresh token'larla JWT tabanlı kimlik doğrulama
+-  Rol tabanlı erişim kontrolü (RBAC)
+-  Kullanıcı profil yönetimi
+-  Kullanıcılar için adres yönetimi
 
 ### Ürün Yönetimi
-- ✅ Ürünler için tam CRUD işlemleri
-- ✅ MinIO ile ürün resmi yükleme
-- ✅ Ürün kategorilendirme
-- ✅ Ürün arama ve filtreleme
-- ✅ Ürün değerlendirmeleri ve puanlama
+-  Ürünler için tam CRUD işlemleri
+-  MinIO ile ürün resmi yükleme
+-  Ürün kategorilendirme
+-  Ürün arama ve filtreleme
+-  Ürün değerlendirmeleri ve puanlama
 
 ### Satıcı Özellikleri
-- ✅ Satıcı profil yönetimi
-- ✅ Satıcılar için ürün yönetimi
-- ✅ Satıcılar için sipariş yönetimi
-- ✅ Kampanya oluşturma ve yönetimi
-- ✅ İstatistiklerle satıcı paneli
-- ✅ Müşteri erişimi için genel satıcı API'si
+-  Satıcı profil yönetimi
+-  Satıcılar için ürün yönetimi
+-  Satıcılar için sipariş yönetimi
+-  Kampanya oluşturma ve yönetimi
+-  İstatistiklerle satıcı paneli
+-  Müşteri erişimi için genel satıcı API'si
 
 ### Müşteri Özellikleri
-- ✅ Ürün görüntüleme ve arama
-- ✅ Alışveriş sepeti işlevselliği
-- ✅ Sipariş verme ve takip
-- ✅ Ürün değerlendirmeleri ve puanlama
-- ✅ İstek listesi yönetimi
-- ✅ Adres yönetimi
+-  Ürün görüntüleme ve arama
+-  Alışveriş sepeti işlevselliği
+-  Sipariş verme ve takip
+-  Ürün değerlendirmeleri ve puanlama
+-  İstek listesi yönetimi
+-  Adres yönetimi
 
 ### Admin Özellikleri
-- ✅ Kullanıcı yönetimi
-- ✅ Satıcı onaylama ve yönetimi
-- ✅ Ürün moderasyonu
-- ✅ Sipariş yönetimi
-- ✅ Kampanya yönetimi
-- ✅ Platform istatistikleri paneli
+-  Kullanıcı yönetimi
+-  Satıcı onaylama ve yönetimi
+-  Ürün moderasyonu
+-  Sipariş yönetimi
+-  Kampanya yönetimi
+-  Platform istatistikleri paneli
 
 ### Gelişmiş Özellikler
-- ✅ Redis tabanlı önbellekleme
-- ✅ Öneriler için vektör benzerliği
-- ✅ Gelişmiş arama işlevselliği
-- ✅ MinIO ile dosya yükleme
-- ✅ E-posta bildirimleri
-- ✅ Sayfalama ve filtreleme
-- ✅ Hata işleme ve loglama
-- ✅ Zod ile girdi doğrulama
-- ✅ Kapsamlı JSDoc dokümantasyonu
+-  Redis tabanlı önbellekleme
+-  Öneriler için vektör benzerliği
+-  Gelişmiş arama işlevselliği
+-  MinIO ile dosya yükleme
+-  E-posta bildirimleri
+-  Sayfalama ve filtreleme
+-  Hata işleme ve loglama
+-  Zod ile girdi doğrulama
+-  Kapsamlı JSDoc dokümantasyonu
 
 ### Bonus Özellikler
-- ✅ Genel satıcı API endpoint'leri
-- ✅ Otomatik değerlendirme onay sistemi
-- ✅ Kapsamlı hata işleme
-- ✅ Uluslararasılaştırma desteği
-- ✅ Performans optimizasyonu
-- ✅ Güvenlik iyileştirmeleri
+-  Genel satıcı API endpoint'leri
+-  Otomatik değerlendirme onay sistemi
+-  Kapsamlı hata işleme
+-  Uluslararasılaştırma desteği
+-  Performans optimizasyonu
+-  Güvenlik iyileştirmeleri
 
 ## Deployment Rehberi
 

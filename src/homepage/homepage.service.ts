@@ -360,7 +360,10 @@ export class HomepageService {
         const [personalized, mostViewed, browsingHistory] = await Promise.all([
           this.recommendationsService.getPersonalizedRecommendations(userId, 6),
           this.recommendationsService.getMostViewedProducts(userId, 6),
-          this.recommendationsService.getBrowsingHistoryRecommendations(userId, 6),
+          this.recommendationsService.getBrowsingHistoryRecommendations(
+            userId,
+            6,
+          ),
         ]);
 
         result['recommendations'] = {
@@ -368,7 +371,7 @@ export class HomepageService {
           mostViewed,
           browsingHistory,
         };
-      } catch (error) {
+      } catch {
         // Recommendation servisi çalışmazsa boş array döndür
         result['recommendations'] = {
           personalized: [],
