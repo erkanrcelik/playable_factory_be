@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
 import {
   Campaign,
   CampaignDocument,
@@ -26,6 +27,7 @@ export class SellerCampaignsService {
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -422,16 +424,17 @@ export class SellerCampaignsService {
     }
 
     try {
-      const uploadResult = await this.minioService.uploadFile(
-        file,
-        `seller-campaigns/${sellerId}/${campaignId}`,
-      );
+      const bucketName =
+        this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+      const uploadResult = await this.minioService.uploadFile(file, bucketName);
 
       // Delete old image if exists
       if (campaign.imageUrl) {
         try {
+          const bucketName =
+            this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
           await this.minioService.deleteFile(
-            'ecommerce',
+            bucketName,
             campaign.imageUrl.split('/').pop() || '',
           );
         } catch (error) {

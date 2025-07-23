@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
 import {
   SellerProfile,
   SellerProfileDocument,
@@ -19,6 +20,7 @@ export class SellerProfileService {
     @InjectModel(SellerProfile.name)
     private sellerProfileModel: Model<SellerProfileDocument>,
     private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -90,10 +92,9 @@ export class SellerProfileService {
     }
 
     try {
-      const uploadResult = await this.minioService.uploadFile(
-        file,
-        `seller-profiles/${sellerId}`,
-      );
+      const bucketName =
+        this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+      const uploadResult = await this.minioService.uploadFile(file, bucketName);
 
       // Update profile with logo URL
       const profile = await this.sellerProfileModel.findOne({
@@ -112,8 +113,10 @@ export class SellerProfileService {
         // Delete old logo if exists
         if (profile.logoUrl) {
           try {
+            const bucketName =
+              this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
             await this.minioService.deleteFile(
-              'ecommerce',
+              bucketName,
               profile.logoUrl.split('/').pop() || '',
             );
           } catch (error) {
@@ -159,8 +162,10 @@ export class SellerProfileService {
 
     try {
       // Delete from MinIO
+      const bucketName =
+        this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
       await this.minioService.deleteFile(
-        'ecommerce',
+        bucketName,
         profile.logoUrl.split('/').pop() || '',
       );
 

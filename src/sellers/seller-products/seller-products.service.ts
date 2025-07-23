@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Product, ProductDocument } from '../../schemas/product.schema';
 import { Category, CategoryDocument } from '../../schemas/category.schema';
 import { CreateProductDto, UpdateProductDto, FindAllProductsDto } from './dto';
@@ -17,6 +18,7 @@ export class SellerProductsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -299,7 +301,9 @@ export class SellerProductsService {
 
     try {
       // Upload to MinIO
-      const uploadResult = await this.minioService.uploadFile(file, 'products');
+      const bucketName =
+        this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+      const uploadResult = await this.minioService.uploadFile(file, bucketName);
 
       // Add to product's imageUrls array
       product.imageUrls.push(uploadResult);
@@ -352,7 +356,9 @@ export class SellerProductsService {
 
     try {
       // Delete from MinIO
-      await this.minioService.deleteFile('ecommerce', imageKey);
+      const bucketName =
+        this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+      await this.minioService.deleteFile(bucketName, imageKey);
 
       // Remove from product's imageUrls array
       product.imageUrls = product.imageUrls.filter((url) => url !== imageKey);

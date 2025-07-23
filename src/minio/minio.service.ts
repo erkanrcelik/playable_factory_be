@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectMinio } from './minio.decorator';
+import { InjectMinio } from 'src/minio/minio.decorator';
 import * as Minio from 'minio';
 import { randomUUID } from 'crypto';
 
@@ -16,50 +16,33 @@ export class MinioService {
     bucketName: string,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.createBucket(bucketName)
-        .then(() => {
-          const allowedExtensions = [
-            '.jpeg',
-            '.png',
-            '.jpg',
-            '.webp',
-            '.txt',
-            '.pdf',
-            '.doc',
-            '.docx',
-            '.xls',
-            '.xlsx',
-          ];
-          const fileName = file.originalname.toLowerCase();
-          const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
+      const allowedExtensions = ['.jpeg', '.png', '.jpg', '.webp'];
+      const fileName = file.originalname.toLowerCase();
+      const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
 
-          if (!allowedExtensions.includes(fileExtension)) {
-            return reject(
-              new BadRequestException(
-                `Invalid file type! Allowed types: JPEG, PNG, WEBP, TXT, PDF, DOC, DOCX, XLS, XLSX`,
-              ),
-            );
+      if (!allowedExtensions.includes(fileExtension)) {
+        return reject(
+          new BadRequestException(
+            `Geçersiz dosya türü! Yalnızca JPEG, PNG, ve WEBP formatındaki resimler yüklenebilir.`,
+          ),
+        );
+      }
+
+      const filename = `${randomUUID().toString()}-${fileName}`;
+      void this.minioService.putObject(
+        bucketName,
+        filename,
+        file.buffer,
+        file.size,
+        (error: any) => {
+          if (error) {
+            reject(new Error(error.message || 'File upload failed'));
+          } else {
+            const fileUrl = `https://${process.env.MINIO_ENDPOINT}/${bucketName}/${filename}`;
+            resolve(fileUrl);
           }
-
-          const filename = `${randomUUID().toString()}-${fileName}`;
-          void this.minioService.putObject(
-            bucketName,
-            filename,
-            file.buffer,
-            file.size,
-            (error: any) => {
-              if (error) {
-                reject(new Error(`File upload failed: ${error.message}`));
-              } else {
-                const fileUrl = `https://sekakademi-minio-6de0f3-130-61-48-47.traefik.me/${bucketName}/${filename}`;
-                resolve(fileUrl);
-              }
-            },
-          );
-        })
-        .catch((error) => {
-          reject(new Error(`Upload failed: ${error.message}`));
-        });
+        },
+      );
     });
   }
 
@@ -73,17 +56,6 @@ export class MinioService {
 
   async bucketExists(bucketName: string): Promise<any> {
     return await this.minioService.bucketExists(bucketName);
-  }
-
-  async createBucket(bucketName: string): Promise<void> {
-    try {
-      const exists = await this.bucketExists(bucketName);
-      if (!exists) {
-        await this.minioService.makeBucket(bucketName, 'us-east-1');
-      }
-    } catch (error) {
-      throw new BadRequestException(`Bucket oluşturulamadı: ${error.message}`);
-    }
   }
 
   async deleteFile(

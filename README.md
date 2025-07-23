@@ -33,8 +33,9 @@ Playable Factory Backend is a comprehensive e-commerce platform API built with N
 - **Passport.js** - Authentication middleware
 
 ### File Storage
-- **MinIO** - Object storage service for file uploads
+- **MinIO** - Object storage service for file uploads with dynamic bucket configuration
 - **Multer** - File upload middleware
+- **Environment-based bucket management** - Bucket names configured via `MINIO_BUCKET_NAME` environment variable
 
 ### Validation & Documentation
 - **Zod** - TypeScript-first schema validation
@@ -91,12 +92,12 @@ Playable Factory Backend is a comprehensive e-commerce platform API built with N
    JWT_SECRET=your-super-secret-jwt-key
    JWT_EXPIRES_IN=7d
 
-   # MinIO
+   # MinIO Configuration
    MINIO_ENDPOINT=localhost
    MINIO_PORT=9000
    MINIO_ACCESS_KEY=your-access-key
    MINIO_SECRET_KEY=your-secret-key
-   MINIO_BUCKET_NAME=playable-factory
+   MINIO_BUCKET_NAME=ekotest
    MINIO_USE_SSL=false
 
    # Email (optional)
@@ -133,6 +134,11 @@ Playable Factory Backend is a comprehensive e-commerce platform API built with N
      -e "MINIO_ROOT_USER=your-access-key" \
      -e "MINIO_ROOT_PASSWORD=your-secret-key" \
      minio/minio server /data --console-address ":9001"
+
+   # Create bucket (optional - will be created automatically)
+   # Access MinIO console at http://localhost:9001
+   # Login with your-access-key / your-secret-key
+   # Create bucket named 'ekotest' (or update MINIO_BUCKET_NAME in .env)
    ```
 
 ## Running the Application
@@ -195,6 +201,45 @@ Email: customer@playablefactory.com
 Password: customer123
 Role: CUSTOMER
 ```
+
+## MinIO File Storage Configuration
+
+### Environment Variables
+The application uses environment variables for MinIO configuration to ensure flexibility across different environments:
+
+```env
+# MinIO Configuration
+MINIO_ENDPOINT=localhost          # MinIO server endpoint
+MINIO_PORT=9000                   # MinIO server port
+MINIO_ACCESS_KEY=your-access-key  # MinIO access key
+MINIO_SECRET_KEY=your-secret-key  # MinIO secret key
+MINIO_BUCKET_NAME=ekotest         # Default bucket name (configurable)
+MINIO_USE_SSL=false               # SSL configuration
+```
+
+### Dynamic Bucket Management
+- **Environment-based bucket names**: Bucket names are configured via `MINIO_BUCKET_NAME` environment variable
+- **No hardcoded bucket names**: All services use the environment variable instead of hardcoded bucket names
+- **Fallback support**: If environment variable is not set, defaults to 'ekotest'
+- **Multi-environment support**: Different bucket names for development, staging, and production
+
+### File Upload Features
+- **UUID-prefixed filenames**: Prevents filename conflicts
+- **Full HTTPS URLs**: Stored URLs include complete HTTPS path for direct access
+- **Automatic bucket creation**: Buckets are created automatically if they don't exist
+- **Presigned URLs**: Secure file access with temporary URLs
+- **File deletion**: Automatic cleanup when files are deleted from database
+
+### Supported File Types
+- **Images**: JPG, PNG, GIF, WebP
+- **Documents**: PDF, DOC, DOCX
+- **Maximum file size**: 10MB per file
+
+### MinIO Endpoints
+- `POST /api/minio/upload/:bucketName` - Upload file to specified bucket
+- `GET /api/minio/download/:bucketName/:filename` - Download file from bucket
+- `GET /api/minio/buckets` - List all available buckets
+- `GET /api/minio/bucket/:bucketName/exists` - Check if bucket exists
 
 ## API Documentation
 

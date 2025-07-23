@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Category, CategoryDocument } from '../../schemas/category.schema';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { CategoryError, CategoryErrorMessages } from './enums';
@@ -30,6 +31,7 @@ export class AdminCategoriesService {
   constructor(
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
@@ -201,7 +203,9 @@ export class AdminCategoriesService {
     }
 
     // Upload image to MinIO
-    const uploadResult = await this.minioService.uploadFile(file, 'categories');
+    const bucketName =
+      this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+    const uploadResult = await this.minioService.uploadFile(file, bucketName);
 
     // Update category with image URL
     await this.categoryModel.findByIdAndUpdate(categoryId, {

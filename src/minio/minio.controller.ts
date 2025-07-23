@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Get,
-  Delete,
   Param,
   UseInterceptors,
   UploadedFile,
@@ -24,7 +23,7 @@ import {
   FileUrlResponse,
   BucketExistsResponse,
 } from './types/minio.types';
-import { UploadFileDto, BucketParamDto, FileParamDto } from './dto/minio.dto';
+import { UploadFileDto } from './dto/minio.dto';
 
 @ApiTags('minio')
 @Controller('minio')
@@ -64,9 +63,12 @@ export class MinioController {
   ): Promise<MinioResponse> {
     try {
       const fileUrl = await this.minioService.uploadFile(file, bucketName);
-      return { message: 'File uploaded successfully', fileUrl };
+      return {
+        message: 'File uploaded successfully',
+        fileUrl: fileUrl,
+      };
     } catch (error) {
-      return { message: 'Error uploading file', error: error.message };
+      return { message: 'Error uploading file', error };
     }
   }
 
@@ -120,13 +122,11 @@ export class MinioController {
     type: MinioResponse,
   })
   async getFile(
-    @Param() params: FileParamDto,
+    @Param('bucketName') bucketName: string,
+    @Param('filename') filename: string,
   ): Promise<FileUrlResponse | MinioResponse> {
     try {
-      const fileUrl = await this.minioService.getFile(
-        params.filename,
-        params.bucketName,
-      );
+      const fileUrl = await this.minioService.getFile(filename, bucketName);
       return { fileUrl };
     } catch (error) {
       return { message: 'Error downloading file', error };
@@ -154,50 +154,13 @@ export class MinioController {
     type: MinioResponse,
   })
   async checkBucketExists(
-    @Param() params: BucketParamDto,
+    @Param('bucketName') bucketName: string,
   ): Promise<BucketExistsResponse | MinioResponse> {
     try {
-      const exists = await this.minioService.bucketExists(params.bucketName);
+      const exists = await this.minioService.bucketExists(bucketName);
       return { exists };
     } catch (error) {
       return { message: 'Error checking bucket existence', error };
-    }
-  }
-
-  @Delete('delete/:bucketName/:filename')
-  @ApiOperation({
-    summary: 'Delete a file from MinIO bucket',
-    description: 'Delete a file from a specified MinIO bucket.',
-  })
-  @ApiParam({
-    name: 'bucketName',
-    description: 'Name of the bucket containing the file',
-    example: 'my-bucket',
-  })
-  @ApiParam({
-    name: 'filename',
-    description: 'Name of the file to delete',
-    example: 'example.txt',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'File deleted successfully',
-    type: MinioResponse,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Failed to delete file',
-    type: MinioResponse,
-  })
-  async deleteFile(
-    @Param('bucketName') bucketName: string,
-    @Param('filename') filename: string,
-  ): Promise<MinioResponse> {
-    try {
-      const result = await this.minioService.deleteFile(bucketName, filename);
-      return { message: result.message };
-    } catch (error) {
-      return { message: 'Error deleting file', error: error.message };
     }
   }
 }

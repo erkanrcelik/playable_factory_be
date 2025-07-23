@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
 import { MinioService } from '../../minio/minio.service';
 import {
   Campaign,
@@ -79,6 +80,7 @@ export class AdminCampaignsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     private minioService: MinioService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createPlatformCampaign(
@@ -449,7 +451,9 @@ export class AdminCampaignsService {
           const urlParts = campaign.imageUrl.split('/');
           const existingKey = urlParts.slice(-2).join('/'); // Get folder/filename
           if (existingKey) {
-            await this.minioService.deleteFile('ecommerce', existingKey);
+            const bucketName =
+              this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+            await this.minioService.deleteFile(bucketName, existingKey);
           }
         } catch {
           // Log error but don't fail the upload
@@ -457,10 +461,9 @@ export class AdminCampaignsService {
       }
 
       // Upload new image
-      const uploadResult = await this.minioService.uploadFile(
-        file,
-        'campaigns',
-      );
+      const bucketName =
+        this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+      const uploadResult = await this.minioService.uploadFile(file, bucketName);
       const imageUrl = uploadResult;
 
       // Update campaign with new image URL
@@ -499,7 +502,9 @@ export class AdminCampaignsService {
       const urlParts = campaign.imageUrl.split('/');
       const imageKey = urlParts.slice(-2).join('/'); // Get folder/filename
       if (imageKey) {
-        await this.minioService.deleteFile('ecommerce', imageKey);
+        const bucketName =
+          this.configService.get<string>('MINIO_BUCKET_NAME') || 'ekotest';
+        await this.minioService.deleteFile(bucketName, imageKey);
       }
 
       // Remove image URL from campaign

@@ -33,8 +33,9 @@ Playable Factory Backend, NestJS ve MongoDB kullanılarak geliştirilmiş kapsam
 - **Passport.js** - Kimlik doğrulama middleware'i
 
 ### Dosya Depolama
-- **MinIO** - Dosya yüklemeleri için nesne depolama servisi
+- **MinIO** - Dinamik bucket yapılandırması ile dosya yüklemeleri için nesne depolama servisi
 - **Multer** - Dosya yükleme middleware'i
+- **Ortam tabanlı bucket yönetimi** - Bucket isimleri `MINIO_BUCKET_NAME` ortam değişkeni ile yapılandırılır
 
 ### Doğrulama ve Dokümantasyon
 - **Zod** - TypeScript öncelikli şema doğrulama
@@ -91,12 +92,12 @@ Playable Factory Backend, NestJS ve MongoDB kullanılarak geliştirilmiş kapsam
    JWT_SECRET=your-super-secret-jwt-key
    JWT_EXPIRES_IN=7d
 
-   # MinIO
+   # MinIO Yapılandırması
    MINIO_ENDPOINT=localhost
    MINIO_PORT=9000
    MINIO_ACCESS_KEY=your-access-key
    MINIO_SECRET_KEY=your-secret-key
-   MINIO_BUCKET_NAME=playable-factory
+   MINIO_BUCKET_NAME=ekotest
    MINIO_USE_SSL=false
 
    # E-posta (isteğe bağlı)
@@ -133,6 +134,11 @@ Playable Factory Backend, NestJS ve MongoDB kullanılarak geliştirilmiş kapsam
      -e "MINIO_ROOT_USER=your-access-key" \
      -e "MINIO_ROOT_PASSWORD=your-secret-key" \
      minio/minio server /data --console-address ":9001"
+
+   # Bucket oluşturma (isteğe bağlı - otomatik oluşturulacak)
+   # MinIO konsoluna http://localhost:9001 adresinden erişin
+   # your-access-key / your-secret-key ile giriş yapın
+   # 'ekotest' adında bucket oluşturun (veya .env'de MINIO_BUCKET_NAME'i güncelleyin)
    ```
 
 ## Uygulamayı Çalıştırma
@@ -195,6 +201,45 @@ E-posta: customer@playablefactory.com
 Şifre: customer123
 Rol: CUSTOMER
 ```
+
+## MinIO Dosya Depolama Yapılandırması
+
+### Ortam Değişkenleri
+Uygulama, farklı ortamlar arasında esneklik sağlamak için MinIO yapılandırmasında ortam değişkenleri kullanır:
+
+```env
+# MinIO Yapılandırması
+MINIO_ENDPOINT=localhost          # MinIO sunucu endpoint'i
+MINIO_PORT=9000                   # MinIO sunucu portu
+MINIO_ACCESS_KEY=your-access-key  # MinIO erişim anahtarı
+MINIO_SECRET_KEY=your-secret-key  # MinIO gizli anahtarı
+MINIO_BUCKET_NAME=ekotest         # Varsayılan bucket adı (yapılandırılabilir)
+MINIO_USE_SSL=false               # SSL yapılandırması
+```
+
+### Dinamik Bucket Yönetimi
+- **Ortam tabanlı bucket isimleri**: Bucket isimleri `MINIO_BUCKET_NAME` ortam değişkeni ile yapılandırılır
+- **Sabit kodlanmış bucket isimleri yok**: Tüm servisler sabit kodlanmış bucket isimleri yerine ortam değişkenini kullanır
+- **Yedekleme desteği**: Ortam değişkeni ayarlanmamışsa 'ekotest' varsayılanına döner
+- **Çoklu ortam desteği**: Geliştirme, test ve üretim için farklı bucket isimleri
+
+### Dosya Yükleme Özellikleri
+- **UUID önekli dosya isimleri**: Dosya adı çakışmalarını önler
+- **Tam HTTPS URL'leri**: Depolanan URL'ler doğrudan erişim için tam HTTPS yolunu içerir
+- **Otomatik bucket oluşturma**: Bucket'lar yoksa otomatik olarak oluşturulur
+- **Presigned URL'ler**: Geçici URL'ler ile güvenli dosya erişimi
+- **Dosya silme**: Veritabanından dosyalar silindiğinde otomatik temizlik
+
+### Desteklenen Dosya Türleri
+- **Resimler**: JPG, PNG, GIF, WebP
+- **Belgeler**: PDF, DOC, DOCX
+- **Maksimum dosya boyutu**: Dosya başına 10MB
+
+### MinIO Endpoint'leri
+- `POST /api/minio/upload/:bucketName` - Belirtilen bucket'a dosya yükle
+- `GET /api/minio/download/:bucketName/:filename` - Bucket'tan dosya indir
+- `GET /api/minio/buckets` - Tüm mevcut bucket'ları listele
+- `GET /api/minio/bucket/:bucketName/exists` - Bucket'ın var olup olmadığını kontrol et
 
 ## API Dokümantasyonu
 

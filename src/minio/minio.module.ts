@@ -14,11 +14,11 @@ import * as Minio from 'minio';
       provide: MINIO_TOKEN,
       useFactory: (configService: ConfigService): Minio.Client => {
         return new Minio.Client({
-          endPoint: configService.get('MINIO_ENDPOINT') || '',
-          port: 9000,
-          accessKey: configService.get('MINIO_ACCESS_KEY'),
-          secretKey: configService.get('MINIO_SECRET_KEY'),
-          useSSL: false,
+          endPoint: configService.get('MINIO_ENDPOINT') || 'localhost',
+          port: +configService.get('MINIO_PORT') || 9000,
+          accessKey: configService.get('MINIO_ACCESS_KEY') || '',
+          secretKey: configService.get('MINIO_SECRET_KEY') || '',
+          useSSL: true,
         });
       },
     },

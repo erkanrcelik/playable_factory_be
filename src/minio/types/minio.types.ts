@@ -9,7 +9,7 @@ export class MinioResponse {
   message: string;
 
   @ApiProperty({
-    description: 'URL to access the uploaded file',
+    description: 'File URL after upload',
     required: false,
     example: 'https://minio-server.com/bucket-name/file-name',
   })
