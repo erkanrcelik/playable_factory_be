@@ -3,7 +3,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-import * as cors from 'cors';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
@@ -27,7 +26,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
  * @throws {Error} If application fails to start
  */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true });
   const configService = app.get(ConfigService);
 
   // Global exception filter for standardized error handling
@@ -47,30 +46,7 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration - restrict origins based on environment
-  const allowedOrigins =
-    configService.get<string>('app.nodeEnv') === 'production'
-      ? [
-          'https://ecommerce-frontend.vercel.app',
-          'https://admin.ecommerce.com',
-          'https://seller.ecommerce.com',
-        ]
-      : [
-          'http://localhost:3000',
-          'http://localhost:3001',
-          'http://localhost:3002',
-          'http://localhost:3004',
-        ];
 
-  app.use(
-    cors({
-      origin: allowedOrigins,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-      maxAge: 86400, // 24 hours
-    } as cors.CorsOptions),
-  );
 
   // Global API prefix for versioning and organization
   app.setGlobalPrefix('api');
