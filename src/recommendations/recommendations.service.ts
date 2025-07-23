@@ -100,7 +100,7 @@ export class RecommendationsService {
   private async updateProductVector(productId: string): Promise<void> {
     const product = await this.productModel
       .findById(productId)
-      .populate('categoryId')
+      .populate('category')
       .exec();
     if (!product) return;
 
@@ -365,7 +365,7 @@ export class RecommendationsService {
     // Tüm aktif ürünleri al
     const products = await this.productModel
       .find({ isActive: true })
-      .populate('categoryId')
+      .populate('category')
       .exec();
 
     const recommendations: Array<{ product: any; similarity: number }> = [];
@@ -436,7 +436,7 @@ export class RecommendationsService {
 
     const products = await this.productModel
       .find({ _id: { $in: topProductIds }, isActive: true })
-      .populate('categoryId')
+      .populate('category')
       .exec();
 
     return products.map((product) => product.toObject());
@@ -448,8 +448,8 @@ export class RecommendationsService {
   async getPopularProducts(limit: number = 10): Promise<any[]> {
     const products = await this.productModel
       .find({ isActive: true })
-      .populate('categoryId')
-      .sort({ salesCount: -1, averageRating: -1 })
+      .populate('category')
+      .sort({ price: 1 })
       .limit(limit)
       .exec();
 
@@ -465,11 +465,11 @@ export class RecommendationsService {
   ): Promise<any[]> {
     const products = await this.productModel
       .find({
-        categoryId: new Types.ObjectId(categoryId),
+        category: new Types.ObjectId(categoryId),
         isActive: true,
       })
-      .populate('categoryId')
-      .sort({ averageRating: -1, salesCount: -1 })
+      .populate('category')
+      .sort({ price: 1 })
       .limit(limit)
       .exec();
 
@@ -494,7 +494,7 @@ export class RecommendationsService {
     // Son görüntülenen ürünlerin kategorilerini analiz et
     const recentProducts = await this.productModel
       .find({ _id: { $in: activity.browsingHistory.slice(-10) } })
-      .populate('categoryId')
+      .populate('category')
       .exec();
 
     const categoryCounts: { [key: string]: number } = {};

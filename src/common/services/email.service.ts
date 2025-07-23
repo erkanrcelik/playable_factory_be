@@ -27,7 +27,6 @@ export class EmailService {
         html,
       });
     } catch (error) {
-      console.error('Email sending failed:', error);
       // In development, we might want to log but not throw
       if (this.configService.get<string>('app.nodeEnv') === 'production') {
         throw error;

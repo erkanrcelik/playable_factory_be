@@ -14,6 +14,7 @@ export const findAllProductsSchema = z.object({
     .default(10),
   search: z.string().optional(),
   category: z.string().optional(),
+  seller: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
   isFeatured: z.coerce.boolean().optional(),
   minPrice: z.coerce
@@ -24,8 +25,19 @@ export const findAllProductsSchema = z.object({
     .number()
     .min(0, 'Maximum price must be 0 or greater')
     .optional(),
+  tags: z.string().optional(), // Comma-separated tags
+  hasDiscount: z.coerce.boolean().optional(),
+  inStock: z.coerce.boolean().optional(),
+  campaignId: z.string().optional(), // Kampanya ID'si ile filtreleme
   sortBy: z
-    .enum(['name', 'price', 'createdAt', 'updatedAt'])
+    .enum([
+      'name',
+      'price',
+      'createdAt',
+      'updatedAt',
+      'averageRating',
+      'reviewCount',
+    ])
     .default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });

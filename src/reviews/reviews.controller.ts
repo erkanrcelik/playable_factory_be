@@ -16,6 +16,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -32,6 +33,71 @@ import { UserRole } from '../schemas/user.schema';
 @Controller('reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
+
+  /**
+   * Get customer's own reviews
+   */
+  @Get('customer/my-reviews')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get customer reviews',
+    description:
+      'Retrieve all reviews created by the authenticated customer (Customer only)',
+  })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page' })
+  @ApiQuery({ name: 'rating', required: false, description: 'Rating filter' })
+  @ApiQuery({
+    name: 'isApproved',
+    required: false,
+    description: 'Approval status filter',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Customer reviews retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              productId: { type: 'string' },
+              userId: { type: 'string' },
+              rating: { type: 'number' },
+              title: { type: 'string' },
+              comment: { type: 'string' },
+              isApproved: { type: 'boolean' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              product: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  imageUrls: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMyReviews(
+    @CurrentUser('id') userId: string,
+    @Query(new ZodValidationPipe(findAllReviewsSchema)) query: any,
+  ) {
+    return this.reviewsService.getCustomerReviews(userId, query);
+  }
 
   /**
    * Get all reviews (admin only)
@@ -61,6 +127,51 @@ export class ReviewsController {
   @ApiResponse({
     status: 200,
     description: 'Reviews retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              productId: { type: 'string' },
+              userId: { type: 'string' },
+              rating: { type: 'number' },
+              title: { type: 'string' },
+              comment: { type: 'string' },
+              isApproved: { type: 'boolean' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              user: {
+                type: 'object',
+                properties: {
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                },
+              },
+              product: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  imageUrls: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
   })
   async getAllReviews(
     @Query(new ZodValidationPipe(findAllReviewsSchema)) query: any,
@@ -83,6 +194,41 @@ export class ReviewsController {
   @ApiResponse({
     status: 200,
     description: 'Product reviews retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              productId: { type: 'string' },
+              userId: { type: 'string' },
+              rating: { type: 'number' },
+              title: { type: 'string' },
+              comment: { type: 'string' },
+              isApproved: { type: 'boolean' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              user: {
+                type: 'object',
+                properties: {
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' },
+        averageRating: { type: 'number' },
+        totalReviews: { type: 'number' },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Product not found' })
   async getProductReviews(
@@ -138,6 +284,34 @@ export class ReviewsController {
   @ApiResponse({
     status: 200,
     description: 'Review retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        productId: { type: 'string' },
+        userId: { type: 'string' },
+        rating: { type: 'number' },
+        title: { type: 'string' },
+        comment: { type: 'string' },
+        isApproved: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        user: {
+          type: 'object',
+          properties: {
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+          },
+        },
+        product: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            imageUrls: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async findOneReview(@Param('id') id: string) {
@@ -154,11 +328,61 @@ export class ReviewsController {
     summary: 'Create review',
     description: 'Create a new review for a product (requires authentication)',
   })
+  @ApiBody({
+    description: 'Review creation data',
+    schema: {
+      type: 'object',
+      required: ['productId', 'rating', 'title', 'comment'],
+      properties: {
+        productId: {
+          type: 'string',
+          description: 'Product ID to review',
+          example: '507f1f77bcf86cd799439011',
+        },
+        rating: {
+          type: 'number',
+          minimum: 1,
+          maximum: 5,
+          description: 'Rating from 1 to 5',
+          example: 5,
+        },
+        title: {
+          type: 'string',
+          minLength: 3,
+          maxLength: 100,
+          description: 'Review title',
+          example: 'Great product!',
+        },
+        comment: {
+          type: 'string',
+          minLength: 10,
+          maxLength: 1000,
+          description: 'Review comment',
+          example: 'This product exceeded my expectations. Highly recommended!',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 201,
     description: 'Review created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        productId: { type: 'string' },
+        userId: { type: 'string' },
+        rating: { type: 'number' },
+        title: { type: 'string' },
+        comment: { type: 'string' },
+        isApproved: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
   })
   @ApiResponse({ status: 400, description: 'Invalid data or already reviewed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Product not found' })
   async createReview(
     @CurrentUser('id') userId: string,
@@ -178,11 +402,55 @@ export class ReviewsController {
     description: 'Update a review (only by the review author)',
   })
   @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiBody({
+    description: 'Review update data',
+    schema: {
+      type: 'object',
+      properties: {
+        rating: {
+          type: 'number',
+          minimum: 1,
+          maximum: 5,
+          description: 'Rating from 1 to 5',
+          example: 4,
+        },
+        title: {
+          type: 'string',
+          minLength: 3,
+          maxLength: 100,
+          description: 'Review title',
+          example: 'Updated review title',
+        },
+        comment: {
+          type: 'string',
+          minLength: 10,
+          maxLength: 1000,
+          description: 'Review comment',
+          example: 'Updated review comment with more details.',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
     description: 'Review updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        productId: { type: 'string' },
+        userId: { type: 'string' },
+        rating: { type: 'number' },
+        title: { type: 'string' },
+        comment: { type: 'string' },
+        isApproved: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
   })
-  @ApiResponse({ status: 403, description: 'Unauthorized access' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not review author' })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async updateReview(
     @Param('id') id: string,
@@ -206,8 +474,15 @@ export class ReviewsController {
   @ApiResponse({
     status: 200,
     description: 'Review deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Review deleted successfully' },
+      },
+    },
   })
-  @ApiResponse({ status: 403, description: 'Unauthorized access' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not review author' })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async deleteReview(
     @Param('id') id: string,
@@ -231,6 +506,25 @@ export class ReviewsController {
   @ApiResponse({
     status: 200,
     description: 'Review approved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        productId: { type: 'string' },
+        userId: { type: 'string' },
+        rating: { type: 'number' },
+        title: { type: 'string' },
+        comment: { type: 'string' },
+        isApproved: { type: 'boolean', example: true },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
   })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async approveReview(@Param('id') id: string) {
@@ -252,6 +546,25 @@ export class ReviewsController {
   @ApiResponse({
     status: 200,
     description: 'Review rejected successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        productId: { type: 'string' },
+        userId: { type: 'string' },
+        rating: { type: 'number' },
+        title: { type: 'string' },
+        comment: { type: 'string' },
+        isApproved: { type: 'boolean', example: false },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
   })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async rejectReview(@Param('id') id: string) {

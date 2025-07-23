@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Campaign, CampaignDocument } from '../../schemas/campaign.schema';
+import {
+  Campaign,
+  CampaignDocument,
+  CampaignType,
+} from '../../schemas/campaign.schema';
 import { Product, ProductDocument } from '../../schemas/product.schema';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -14,7 +18,7 @@ import {
   CampaignError,
   CampaignErrorMessages,
 } from './enums/campaign-error.enum';
-import { MinioService } from '../../common/services/minio.service';
+import { MinioService } from '../../minio/minio.service';
 
 @Injectable()
 export class SellerCampaignsService {
@@ -168,22 +172,45 @@ export class SellerCampaignsService {
       );
     }
 
-    // Validate that all products belong to the seller
-    const sellerProducts = await this.productModel.find({
-      _id: { $in: createDto.productIds.map((id) => new Types.ObjectId(id)) },
-      sellerId: new Types.ObjectId(sellerId),
-    });
+    let productIds: Types.ObjectId[] = [];
 
-    if (sellerProducts.length !== createDto.productIds.length) {
-      throw new BadRequestException(
-        CampaignErrorMessages[CampaignError.PRODUCT_NOT_OWNED],
+    // If productIds is provided, validate that all products belong to the seller
+    if (createDto.productIds && createDto.productIds.length > 0) {
+      const sellerProducts = await this.productModel.find({
+        _id: { $in: createDto.productIds.map((id) => new Types.ObjectId(id)) },
+        sellerId: new Types.ObjectId(sellerId),
+      });
+
+      if (sellerProducts.length !== createDto.productIds.length) {
+        throw new BadRequestException(
+          CampaignErrorMessages[CampaignError.PRODUCT_NOT_OWNED],
+        );
+      }
+
+      productIds = createDto.productIds.map((id) => new Types.ObjectId(id));
+    } else {
+      // If no productIds provided, get all seller's products
+      const allSellerProducts = await this.productModel.find({
+        sellerId: new Types.ObjectId(sellerId),
+        isActive: true, // Only active products
+      });
+
+      if (allSellerProducts.length === 0) {
+        throw new BadRequestException(
+          'No active products found. Please add products before creating a campaign.',
+        );
+      }
+
+      productIds = allSellerProducts.map(
+        (product) => product._id as Types.ObjectId,
       );
     }
 
     const campaign = new this.campaignModel({
       ...createDto,
+      type: CampaignType.SELLER,
       sellerId: new Types.ObjectId(sellerId),
-      productIds: createDto.productIds.map((id) => new Types.ObjectId(id)),
+      productIds: productIds,
     });
 
     const savedCampaign = await campaign.save();
@@ -253,15 +280,36 @@ export class SellerCampaignsService {
     }
 
     // Validate products if provided
-    if (updateDto.productIds) {
-      const sellerProducts = await this.productModel.find({
-        _id: { $in: updateDto.productIds.map((id) => new Types.ObjectId(id)) },
-        sellerId: new Types.ObjectId(sellerId),
-      });
+    if (updateDto.productIds !== undefined) {
+      if (updateDto.productIds && updateDto.productIds.length > 0) {
+        // Validate that all products belong to the seller
+        const sellerProducts = await this.productModel.find({
+          _id: {
+            $in: updateDto.productIds.map((id) => new Types.ObjectId(id)),
+          },
+          sellerId: new Types.ObjectId(sellerId),
+        });
 
-      if (sellerProducts.length !== updateDto.productIds.length) {
-        throw new BadRequestException(
-          CampaignErrorMessages[CampaignError.PRODUCT_NOT_OWNED],
+        if (sellerProducts.length !== updateDto.productIds.length) {
+          throw new BadRequestException(
+            CampaignErrorMessages[CampaignError.PRODUCT_NOT_OWNED],
+          );
+        }
+      } else {
+        // If empty array provided, get all seller's products
+        const allSellerProducts = await this.productModel.find({
+          sellerId: new Types.ObjectId(sellerId),
+          isActive: true, // Only active products
+        });
+
+        if (allSellerProducts.length === 0) {
+          throw new BadRequestException(
+            'No active products found. Please add products before updating the campaign.',
+          );
+        }
+
+        updateDto.productIds = allSellerProducts.map((product) =>
+          (product._id as Types.ObjectId).toString(),
         );
       }
     }
@@ -325,9 +373,13 @@ export class SellerCampaignsService {
     // Delete campaign image if exists
     if (campaign.imageUrl) {
       try {
-        await this.minioService.deleteFile(campaign.imageUrl);
-      } catch {
-        console.error('Campaign image deletion error');
+        await this.minioService.deleteFile(
+          'ecommerce',
+          campaign.imageUrl.split('/').pop() || '',
+        );
+      } catch (error) {
+        // Log error but don't throw - file might already be deleted
+        console.warn('Failed to delete old campaign image:', error);
       }
     }
 
@@ -378,19 +430,23 @@ export class SellerCampaignsService {
       // Delete old image if exists
       if (campaign.imageUrl) {
         try {
-          await this.minioService.deleteFile(campaign.imageUrl);
-        } catch {
-          console.error('Old campaign image deletion error');
+          await this.minioService.deleteFile(
+            'ecommerce',
+            campaign.imageUrl.split('/').pop() || '',
+          );
+        } catch (error) {
+          // Log error but don't throw - file might already be deleted
+          console.warn('Failed to delete old campaign image:', error);
         }
       }
 
       // Update campaign with new image
-      campaign.imageUrl = uploadResult.key;
+      campaign.imageUrl = uploadResult;
       await campaign.save();
 
       return {
-        imageUrl: uploadResult.url,
-        imageKey: uploadResult.key,
+        imageUrl: uploadResult,
+        imageKey: uploadResult.split('/').pop() || '',
         message: 'Campaign image uploaded successfully',
       };
     } catch {

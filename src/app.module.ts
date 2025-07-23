@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -12,15 +13,23 @@ import { AdminCategoriesModule } from './admin/categories/admin-categories.modul
 import { AdminUsersModule } from './admin/users/admin-users.module';
 import { AdminSellersModule } from './admin/sellers/admin-sellers.module';
 import { AdminCampaignsModule } from './admin/campaigns/admin-campaigns.module';
+import { AdminProductsModule } from './admin/products/admin-products.module';
+import { AdminDashboardModule } from './admin/dashboard/admin-dashboard.module';
 import { SellerProductsModule } from './sellers/seller-products/seller-products.module';
 import { SellerOrdersModule } from './sellers/seller-orders/seller-orders.module';
 import { SellerProfileModule } from './sellers/seller-profile/seller-profile.module';
 import { SellerCampaignsModule } from './sellers/seller-campaigns/seller-campaigns.module';
+import { SellerDashboardModule } from './sellers/seller-dashboard/seller-dashboard.module';
+import { SellerPublicModule } from './sellers/seller-public/seller-public.module';
 import { CartModule } from './cart/cart.module';
+import { OrdersModule } from './orders/orders.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { HomepageModule } from './homepage/homepage.module';
+import { SearchModule } from './search/search.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
-import { MinioService } from './common/services/minio.service';
+import { MinioModule } from './minio/minio.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -56,16 +65,26 @@ import configuration from './config/configuration';
     AdminUsersModule,
     AdminSellersModule,
     AdminCampaignsModule,
+    AdminProductsModule,
+    AdminDashboardModule,
     SellerProductsModule,
     SellerOrdersModule,
     SellerProfileModule,
     SellerCampaignsModule,
+    SellerDashboardModule,
+    SellerPublicModule,
     CartModule,
+    OrdersModule,
+    CampaignsModule,
     ReviewsModule,
     RecommendationsModule,
+    HomepageModule,
+    SearchModule,
+    MinioModule,
+    TerminusModule,
   ],
   controllers: [AppController],
-  providers: [AppService, MinioService],
+  providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

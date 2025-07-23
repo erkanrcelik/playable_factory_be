@@ -9,7 +9,6 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import {
   LoginDto,
@@ -66,18 +65,14 @@ export class AuthService {
 
     await user.save();
 
-    // Generate email verification token
-    const emailVerificationToken = randomBytes(32).toString('hex');
-    const emailVerificationTokenExpires = new Date(
+    // Set static verification code
+    user.emailVerificationToken = '1234';
+    user.emailVerificationTokenExpires = new Date(
       Date.now() + 24 * 60 * 60 * 1000,
     ); // 24 hours
-
-    user.emailVerificationToken = emailVerificationToken;
-    user.emailVerificationTokenExpires = emailVerificationTokenExpires;
     await user.save();
 
     // Send verification email
-    this.sendVerificationEmail(user.email, emailVerificationToken);
 
     return { message: AuthErrorMessages[AuthError.REGISTRATION_SUCCESS] };
   }
@@ -151,11 +146,19 @@ export class AuthService {
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto) {
-    const { token } = verifyEmailDto;
+    const { token, email } = verifyEmailDto;
 
+    // Static verification code: 1234
+    if (token !== '1234') {
+      throw new BadRequestException(
+        AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_VERIFICATION_TOKEN],
+      );
+    }
+
+    // Find user by email
     const user = await this.userModel.findOne({
-      emailVerificationToken: token,
-      emailVerificationTokenExpires: { $gt: new Date() },
+      email,
+      isEmailVerified: false,
     });
 
     if (!user) {
@@ -183,28 +186,31 @@ export class AuthService {
       };
     }
 
-    // Generate password reset token
-    const passwordResetToken = randomBytes(32).toString('hex');
-    const passwordResetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    user.passwordResetToken = passwordResetToken;
-    user.passwordResetTokenExpires = passwordResetTokenExpires;
+    // Store email for password reset (simplified approach)
+    // In real implementation, you'd generate a unique code and store it
+    user.passwordResetToken = '1234'; // Static code
+    user.passwordResetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    // Send password reset email
-    this.sendPasswordResetEmail(user.email, passwordResetToken);
-
     return {
-      message:
-        'If an account with this email exists, a password reset link has been sent',
+      message: AuthErrorMessages[AuthError.PASSWORD_RESET_EMAIL_SENT],
     };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
-    const { token, password } = resetPasswordDto;
+    const { token, password, email } = resetPasswordDto;
 
+    // Static reset code: 1234
+    if (token !== '1234') {
+      throw new BadRequestException(
+        AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_RESET_TOKEN],
+      );
+    }
+
+    // Find user with reset token and email
     const user = await this.userModel.findOne({
-      passwordResetToken: token,
+      email,
+      passwordResetToken: '1234',
       passwordResetTokenExpires: { $gt: new Date() },
     });
 
@@ -239,18 +245,14 @@ export class AuthService {
       );
     }
 
-    // Generate new verification token
-    const emailVerificationToken = randomBytes(32).toString('hex');
-    const emailVerificationTokenExpires = new Date(
+    // Set static verification code
+    user.emailVerificationToken = '1234';
+    user.emailVerificationTokenExpires = new Date(
       Date.now() + 24 * 60 * 60 * 1000,
     ); // 24 hours
-
-    user.emailVerificationToken = emailVerificationToken;
-    user.emailVerificationTokenExpires = emailVerificationTokenExpires;
     await user.save();
 
-    // Send verification email
-    this.sendVerificationEmail(user.email, emailVerificationToken);
+    // Send verification email;
 
     return { message: AuthErrorMessages[AuthError.VERIFICATION_EMAIL_SENT] };
   }
@@ -279,21 +281,37 @@ export class AuthService {
     };
   }
 
-  private sendVerificationEmail(email: string, token: string) {
-    // This method will need to be implemented without the EmailService dependency
-    // For now, it will be a placeholder or throw an error if not implemented
-    console.log(`Sending verification email to ${email} with token: ${token}`);
-    // Example: await this.emailService.sendVerificationEmail(email, token);
-  }
-
-  private sendPasswordResetEmail(email: string, token: string) {
-    // This method will need to be implemented without the EmailService dependency
-    // For now, it will be a placeholder or throw an error if not implemented
-    console.log(
-      `Sending password reset email to ${email} with token: ${token}`,
-    );
-    // Example: await this.emailService.sendPasswordResetEmail(email, token);
-  }
+  /**
+   * Send email verification to user
+   *
+   * @private
+   * @param email - User email address
+   * @param token - Verification token
+   *
+   * @description This is a placeholder implementation. In production, this should:
+   * - Integrate with email service (SendGrid, AWS SES, etc.)
+   * - Use proper email templates
+   * - Handle email delivery failures
+   * - Log email sending attempts
+   *
+   * @todo Implement proper email service integration
+   */
+  /**
+   * Send password reset email to user
+   *
+   * @private
+   * @param email - User email address
+   * @param token - Password reset token
+   *
+   * @description This is a placeholder implementation. In production, this should:
+   * - Integrate with email service (SendGrid, AWS SES, etc.)
+   * - Use proper email templates with branding
+   * - Include security warnings and instructions
+   * - Handle email delivery failures and retries
+   * - Log password reset attempts for security auditing
+   *
+   * @todo Implement proper email service integration
+   */
 
   async logout(userId: string, accessToken?: string, refreshToken?: string) {
     // In a JWT-based system, logout is primarily handled on the client side
@@ -363,33 +381,28 @@ export class AuthService {
   }
 
   async getUserInfo(userId: string) {
-    try {
-      const user = await this.userModel.findById(userId).select('-password');
+    const user = await this.userModel.findById(userId).select('-password');
 
-      if (!user) {
-        throw new UnauthorizedException(
-          AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
-        );
-      }
-
-      return {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        phoneNumber: user.phoneNumber,
-        addresses: user.addresses || [],
-        preferences: user.preferences || {},
-        isEmailVerified: user.isEmailVerified,
-        isActive: user.isActive,
-        lastLogoutAt: user.lastLogoutAt,
-        createdAt: (user as any).createdAt,
-        updatedAt: (user as any).updatedAt,
-      };
-    } catch (error) {
-      console.error('getUserInfo error:', error);
-      throw error;
+    if (!user) {
+      throw new UnauthorizedException(
+        AuthErrorMessages[AuthError.INVALID_CREDENTIALS],
+      );
     }
+
+    return {
+      id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      phoneNumber: user.phoneNumber,
+      addresses: user.addresses || [],
+      preferences: user.preferences || {},
+      isEmailVerified: user.isEmailVerified,
+      isActive: user.isActive,
+      lastLogoutAt: user.lastLogoutAt,
+      createdAt: (user as any).createdAt,
+      updatedAt: (user as any).updatedAt,
+    };
   }
 }

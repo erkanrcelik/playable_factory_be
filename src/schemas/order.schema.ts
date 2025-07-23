@@ -35,6 +35,18 @@ export class OrderItem {
 @Schema({ timestamps: true })
 export class ShippingAddress {
   @Prop({ required: true })
+  firstName: string;
+
+  @Prop({ required: true })
+  lastName: string;
+
+  @Prop({ required: true })
+  email: string;
+
+  @Prop({ required: true })
+  phone: string;
+
+  @Prop({ required: true })
   street: string;
 
   @Prop({ required: true })

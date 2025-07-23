@@ -403,18 +403,18 @@ export class AuthController {
   }
 
   /**
-   * Reset password using reset token
+   * Reset password using reset code
    *
-   * Resets the user password using a valid reset token.
-   * The token is obtained from the password reset email.
+   * Resets the user password using a valid reset code.
+   * The code is obtained from the password reset email.
    *
-   * @param resetPasswordDto - Reset token and new password
+   * @param resetPasswordDto - Reset code and new password
    * @returns Success message
    *
    * @example
    * ```json
    * {
-   *   "token": "reset-token-from-email",
+   *   "token": "1234",
    *   "password": "newSecurePassword123"
    * }
    * ```
@@ -422,27 +422,33 @@ export class AuthController {
   @Post('reset-password')
   @UsePipes(new ZodValidationPipe(resetPasswordSchema))
   @ApiOperation({
-    summary: 'Reset password using token',
+    summary: 'Reset password using code',
     description:
-      'Resets user password using a valid reset token obtained from the password reset email. Token is valid for 1 hour.',
+      'Resets user password using a valid reset code obtained from the password reset email. Code is valid for 1 hour.',
     tags: ['Authentication'],
   })
   @ApiBody({
-    description: 'Reset token and new password',
+    description: 'Reset code and new password',
     schema: {
       type: 'object',
-      required: ['token', 'password'],
+      required: ['token', 'password', 'email'],
       properties: {
         token: {
           type: 'string',
-          description: 'Reset token from email',
-          example: 'reset-token-from-email',
+          description: 'Reset code from email (1234)',
+          example: '1234',
         },
         password: {
           type: 'string',
           minLength: 6,
           description: 'New password (minimum 6 characters)',
           example: 'newSecurePassword123',
+        },
+        email: {
+          type: 'string',
+          format: 'email',
+          description: 'Email address for password reset',
+          example: 'user@example.com',
         },
       },
     },
@@ -475,27 +481,33 @@ export class AuthController {
   /**
    * Verify email address
    *
-   * Verifies the user's email address using a verification token.
-   * The token is sent to the user's email during registration.
+   * Verifies the user's email address using a verification code.
+   * The code is sent to the user's email during registration.
    *
-   * @param token - Email verification token from URL query parameter
+   * @param token - Email verification code from URL query parameter
    * @returns Success message
    *
    * @example
-   * GET /api/auth/verify-email?token=verification-token
+   * GET /api/auth/verify-email?token=1234
    */
   @Get('verify-email')
   @ApiOperation({
     summary: 'Verify email address',
     description:
-      'Verifies user email address using a verification token sent during registration. Token is valid for 24 hours.',
+      'Verifies user email address using a verification code sent during registration. Code is valid for 24 hours.',
     tags: ['Authentication'],
   })
   @ApiQuery({
     name: 'token',
-    description: 'Email verification token',
+    description: 'Email verification code (1234)',
     type: 'string',
-    example: 'verification-token-from-email',
+    example: '1234',
+  })
+  @ApiQuery({
+    name: 'email',
+    description: 'Email address to verify',
+    type: 'string',
+    example: 'user@example.com',
   })
   @ApiResponse({
     status: 200,
@@ -515,8 +527,11 @@ export class AuthController {
     description:
       AuthErrorMessages[AuthError.INVALID_OR_EXPIRED_VERIFICATION_TOKEN],
   })
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail({ token });
+  async verifyEmail(
+    @Query('token') token: string,
+    @Query('email') email: string,
+  ) {
+    return this.authService.verifyEmail({ token, email });
   }
 
   /**

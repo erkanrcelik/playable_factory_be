@@ -6,6 +6,7 @@ import {
   Put,
   Body,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -224,5 +225,167 @@ export class SellerOrdersController {
   })
   async getOrderStats(@CurrentUser('id') sellerId: string) {
     return this.sellerOrdersService.getOrderStats(sellerId);
+  }
+
+  /**
+   * Add notes to an order
+   */
+  @Put(':id/notes')
+  @ApiOperation({
+    summary: 'Add seller notes to order',
+    description:
+      'Add internal notes to an order for tracking and communication purposes',
+  })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        notes: {
+          type: 'string',
+          maxLength: 1000,
+          description: 'Seller notes for the order',
+        },
+      },
+      required: ['notes'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order notes added successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async addOrderNotes(
+    @Param('id') orderId: string,
+    @Body('notes') notes: string,
+    @CurrentUser('id') sellerId: string,
+  ) {
+    return this.sellerOrdersService.addOrderNotes(orderId, sellerId, notes);
+  }
+
+  /**
+   * Get orders requiring attention
+   */
+  @Get('attention/required')
+  @ApiOperation({
+    summary: 'Get orders requiring attention',
+    description:
+      'Retrieve orders that need seller action (pending or processing)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Maximum number of orders to return (default: 10)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Orders requiring attention retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          status: { type: 'string' },
+          totalPrice: { type: 'number' },
+          customerName: { type: 'string' },
+          customerEmail: { type: 'string' },
+          itemCount: { type: 'number' },
+          orderDate: { type: 'string', format: 'date-time' },
+          urgency: { type: 'string', enum: ['high', 'medium', 'low'] },
+        },
+      },
+    },
+  })
+  async getOrdersRequiringAttention(
+    @Query('limit') limit: number = 10,
+    @CurrentUser('id') sellerId: string,
+  ) {
+    return this.sellerOrdersService.getOrdersRequiringAttention(
+      sellerId,
+      limit,
+    );
+  }
+
+  /**
+   * Get revenue analytics
+   */
+  @Get('analytics/revenue')
+  @ApiOperation({
+    summary: 'Get revenue analytics',
+    description:
+      'Retrieve detailed revenue analytics for a specified date range',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    type: String,
+    description: 'Start date for analytics (YYYY-MM-DD)',
+    example: '2024-01-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    description: 'End date for analytics (YYYY-MM-DD)',
+    example: '2024-12-31',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Revenue analytics retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        period: {
+          type: 'object',
+          properties: {
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time' },
+            totalDays: { type: 'number' },
+          },
+        },
+        summary: {
+          type: 'object',
+          properties: {
+            totalRevenue: { type: 'number' },
+            totalOrders: { type: 'number' },
+            averageOrderValue: { type: 'number' },
+            dailyAverage: { type: 'number' },
+          },
+        },
+        dailyBreakdown: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string', format: 'date' },
+              revenue: { type: 'number' },
+              orderCount: { type: 'number' },
+              averageOrderValue: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid date range' })
+  async getRevenueAnalytics(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @CurrentUser('id') sellerId: string,
+  ) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new BadRequestException('Invalid date format');
+    }
+
+    if (start > end) {
+      throw new BadRequestException('Start date must be before end date');
+    }
+
+    return this.sellerOrdersService.getRevenueAnalytics(sellerId, start, end);
   }
 }

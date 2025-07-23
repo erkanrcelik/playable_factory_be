@@ -4,6 +4,7 @@ import { Campaign, CampaignSchema } from '../../schemas/campaign.schema';
 import { Product, ProductSchema } from '../../schemas/product.schema';
 import { SellerCampaignsController } from './seller-campaigns.controller';
 import { SellerCampaignsService } from './seller-campaigns.service';
+import { MinioService } from '../../minio/minio.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { SellerCampaignsService } from './seller-campaigns.service';
     ]),
   ],
   controllers: [SellerCampaignsController],
-  providers: [SellerCampaignsService],
+  providers: [SellerCampaignsService, MinioService],
   exports: [SellerCampaignsService],
 })
 export class SellerCampaignsModule {}

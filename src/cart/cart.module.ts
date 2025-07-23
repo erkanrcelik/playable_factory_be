@@ -6,6 +6,7 @@ import { Product, ProductSchema } from '../schemas/product.schema';
 import { Campaign, CampaignSchema } from '../schemas/campaign.schema';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CartService } from './cart.service';
       { name: Product.name, schema: ProductSchema },
       { name: Campaign.name, schema: CampaignSchema },
     ]),
+    OrdersModule,
   ],
   controllers: [CartController],
   providers: [CartService],

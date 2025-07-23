@@ -20,8 +20,21 @@ export const updateCampaignSchema = z.object({
     .optional(),
   productIds: z
     .array(z.string())
-    .min(1, 'At least one product must be selected')
-    .optional(),
+    .optional()
+    .refine(
+      (productIds) => {
+        // If productIds is provided, at least 1 product must be selected
+        if (productIds && productIds.length > 0) {
+          return productIds.length >= 1;
+        }
+        // If productIds is not provided, campaign applies to all products
+        return true;
+      },
+      {
+        message:
+          'If products are specified, at least one product must be selected',
+      },
+    ),
   isActive: z.boolean().optional(),
   maxUsage: z.number().int().min(1, 'Max usage must be at least 1').optional(),
   minOrderAmount: z

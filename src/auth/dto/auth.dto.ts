@@ -33,10 +33,12 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   token: z.string(),
   password: z.string().min(6),
+  email: z.string().email(),
 });
 
 export const verifyEmailSchema = z.object({
   token: z.string(),
+  email: z.string().email(),
 });
 
 export type RegisterDto = z.infer<typeof registerSchema>;

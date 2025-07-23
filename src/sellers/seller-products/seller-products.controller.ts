@@ -39,7 +39,7 @@ import {
   findAllProductsSchema,
 } from './dto';
 
-@ApiTags('Satıcı Ürün Yönetimi')
+@ApiTags('Seller Product Management')
 @Controller('seller/products')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SELLER)
@@ -48,47 +48,46 @@ export class SellerProductsController {
   constructor(private readonly sellerProductsService: SellerProductsService) {}
 
   /**
-   * Satıcının ürünlerini listeler
+   * List seller's products
    */
   @Get()
   @ApiOperation({
-    summary: 'Satıcının ürünlerini listeler',
-    description:
-      'Satıcının kendi ürünlerini filtreleme ve sayfalama ile listeler',
+    summary: 'List seller products',
+    description: 'List seller products with filtering and pagination',
   })
-  @ApiQuery({ name: 'page', required: false, description: 'Sayfa numarası' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
   @ApiQuery({
     name: 'limit',
     required: false,
-    description: 'Sayfa başına öğe sayısı',
+    description: 'Items per page',
   })
-  @ApiQuery({ name: 'search', required: false, description: 'Arama terimi' })
-  @ApiQuery({ name: 'category', required: false, description: 'Kategori ID' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term' })
+  @ApiQuery({ name: 'category', required: false, description: 'Category ID' })
   @ApiQuery({
     name: 'isActive',
     required: false,
-    description: 'Aktif durum filtresi',
+    description: 'Active status filter',
   })
   @ApiQuery({
     name: 'isFeatured',
     required: false,
-    description: 'Öne çıkan ürün filtresi',
+    description: 'Featured product filter',
   })
-  @ApiQuery({ name: 'minPrice', required: false, description: 'Minimum fiyat' })
+  @ApiQuery({ name: 'minPrice', required: false, description: 'Minimum price' })
   @ApiQuery({
     name: 'maxPrice',
     required: false,
-    description: 'Maksimum fiyat',
+    description: 'Maximum price',
   })
-  @ApiQuery({ name: 'sortBy', required: false, description: 'Sıralama alanı' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field' })
   @ApiQuery({
     name: 'sortOrder',
     required: false,
-    description: 'Sıralama yönü',
+    description: 'Sort order',
   })
   @ApiResponse({
     status: 200,
-    description: 'Ürün listesi başarıyla getirildi',
+    description: 'Product list retrieved successfully',
     schema: {
       type: 'object',
       properties: {
@@ -117,8 +116,8 @@ export class SellerProductsController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Yetkilendirme hatası' })
-  @ApiResponse({ status: 403, description: 'Yetersiz yetki' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async findAllProducts(
     @Query(new ZodValidationPipe(findAllProductsSchema))
     query: FindAllProductsDto,
@@ -128,17 +127,17 @@ export class SellerProductsController {
   }
 
   /**
-   * Belirli bir ürünü getirir
+   * Get specific product
    */
   @Get(':id')
   @ApiOperation({
-    summary: 'Ürün detaylarını getirir',
-    description: 'Satıcının kendi ürününün detaylarını getirir',
+    summary: 'Get product details',
+    description: 'Get seller product details',
   })
-  @ApiParam({ name: 'id', description: 'Ürün ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiResponse({
     status: 200,
-    description: 'Ürün detayları başarıyla getirildi',
+    description: 'Product details retrieved successfully',
     schema: {
       type: 'object',
       properties: {
@@ -158,7 +157,7 @@ export class SellerProductsController {
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Ürün bulunamadı' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async findOneProduct(
     @Param('id') productId: string,
     @CurrentUser('id') sellerId: string,
@@ -167,12 +166,12 @@ export class SellerProductsController {
   }
 
   /**
-   * Yeni ürün oluşturur
+   * Create new product
    */
   @Post()
   @ApiOperation({
-    summary: 'Yeni ürün oluşturur',
-    description: 'Satıcı için yeni ürün oluşturur',
+    summary: 'Create new product',
+    description: 'Create new product for seller',
   })
   @ApiBody({
     schema: {
@@ -191,9 +190,9 @@ export class SellerProductsController {
   })
   @ApiResponse({
     status: 201,
-    description: 'Ürün başarıyla oluşturuldu',
+    description: 'Product created successfully',
   })
-  @ApiResponse({ status: 400, description: 'Geçersiz veri' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
   async createProduct(
     @Body(new ZodValidationPipe(createProductSchema))
     createProductDto: CreateProductDto,
@@ -203,14 +202,14 @@ export class SellerProductsController {
   }
 
   /**
-   * Ürün günceller
+   * Update product
    */
   @Put(':id')
   @ApiOperation({
-    summary: 'Ürün günceller',
-    description: 'Satıcının kendi ürününü günceller',
+    summary: 'Update product',
+    description: 'Update seller product',
   })
-  @ApiParam({ name: 'id', description: 'Ürün ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -232,9 +231,9 @@ export class SellerProductsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Ürün başarıyla güncellendi',
+    description: 'Product updated successfully',
   })
-  @ApiResponse({ status: 404, description: 'Ürün bulunamadı' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async updateProduct(
     @Param('id') productId: string,
     @Body(new ZodValidationPipe(updateProductSchema))
@@ -249,25 +248,25 @@ export class SellerProductsController {
   }
 
   /**
-   * Ürün siler
+   * Delete product
    */
   @Delete(':id')
   @ApiOperation({
-    summary: 'Ürün siler',
-    description: 'Satıcının kendi ürününü siler',
+    summary: 'Delete product',
+    description: 'Delete seller product',
   })
-  @ApiParam({ name: 'id', description: 'Ürün ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiResponse({
     status: 200,
-    description: 'Ürün başarıyla silindi',
+    description: 'Product deleted successfully',
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Ürün başarıyla silindi' },
+        message: { type: 'string', example: 'Product deleted successfully' },
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Ürün bulunamadı' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async deleteProduct(
     @Param('id') productId: string,
     @CurrentUser('id') sellerId: string,
@@ -276,19 +275,19 @@ export class SellerProductsController {
   }
 
   /**
-   * Ürün durumunu değiştirir (aktif/pasif)
+   * Toggle product status (active/inactive)
    */
   @Put(':id/toggle-status')
   @ApiOperation({
-    summary: 'Ürün durumunu değiştirir',
-    description: 'Ürünün aktif/pasif durumunu değiştirir',
+    summary: 'Toggle product status',
+    description: 'Toggle product active/inactive status',
   })
-  @ApiParam({ name: 'id', description: 'Ürün ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiResponse({
     status: 200,
-    description: 'Ürün durumu başarıyla değiştirildi',
+    description: 'Product status toggled successfully',
   })
-  @ApiResponse({ status: 404, description: 'Ürün bulunamadı' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async toggleProductStatus(
     @Param('id') productId: string,
     @CurrentUser('id') sellerId: string,
@@ -297,14 +296,14 @@ export class SellerProductsController {
   }
 
   /**
-   * Ürün resmi yükler
+   * Upload product image
    */
   @Post(':id/upload-image')
   @ApiOperation({
-    summary: 'Ürün resmi yükler',
-    description: 'Ürün için resim yükler (MinIO)',
+    summary: 'Upload product image',
+    description: 'Upload image for product (MinIO)',
   })
-  @ApiParam({ name: 'id', description: 'Ürün ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -313,7 +312,7 @@ export class SellerProductsController {
         image: {
           type: 'string',
           format: 'binary',
-          description: 'Yüklenecek resim dosyası',
+          description: 'Image file to upload',
         },
       },
     },
@@ -321,7 +320,7 @@ export class SellerProductsController {
   @UseInterceptors(FileInterceptor('image'))
   @ApiResponse({
     status: 201,
-    description: 'Resim başarıyla yüklendi',
+    description: 'Image uploaded successfully',
     schema: {
       type: 'object',
       properties: {
@@ -333,9 +332,9 @@ export class SellerProductsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Geçersiz dosya formatı veya boyutu',
+    description: 'Invalid file format or size',
   })
-  @ApiResponse({ status: 404, description: 'Ürün bulunamadı' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async uploadProductImage(
     @Param('id') productId: string,
     @UploadedFile() file: Express.Multer.File,
@@ -353,26 +352,26 @@ export class SellerProductsController {
   }
 
   /**
-   * Ürün resmini siler
+   * Delete product image
    */
   @Delete(':id/images/:imageKey')
   @ApiOperation({
-    summary: 'Ürün resmini siler',
-    description: 'Ürünün belirli bir resmini siler',
+    summary: 'Delete product image',
+    description: 'Delete specific image from product',
   })
-  @ApiParam({ name: 'id', description: 'Ürün ID' })
-  @ApiParam({ name: 'imageKey', description: "Resim key'i" })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiParam({ name: 'imageKey', description: 'Image key' })
   @ApiResponse({
     status: 200,
-    description: 'Resim başarıyla silindi',
+    description: 'Image deleted successfully',
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Resim başarıyla silindi' },
+        message: { type: 'string', example: 'Image deleted successfully' },
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Ürün bulunamadı' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async deleteProductImage(
     @Param('id') productId: string,
     @Param('imageKey') imageKey: string,
@@ -386,24 +385,24 @@ export class SellerProductsController {
   }
 
   /**
-   * Satıcının ürün istatistiklerini getirir
+   * Get seller product statistics
    */
   @Get('stats/overview')
   @ApiOperation({
-    summary: 'Ürün istatistiklerini getirir',
-    description: 'Satıcının ürün istatistiklerini getirir',
+    summary: 'Get product statistics',
+    description: 'Get seller product statistics',
   })
   @ApiResponse({
     status: 200,
-    description: 'İstatistikler başarıyla getirildi',
+    description: 'Statistics retrieved successfully',
     schema: {
       type: 'object',
       properties: {
-        total: { type: 'number', description: 'Toplam ürün sayısı' },
-        active: { type: 'number', description: 'Aktif ürün sayısı' },
-        inactive: { type: 'number', description: 'Pasif ürün sayısı' },
-        featured: { type: 'number', description: 'Öne çıkan ürün sayısı' },
-        avgPrice: { type: 'number', description: 'Ortalama fiyat' },
+        total: { type: 'number', description: 'Total product count' },
+        active: { type: 'number', description: 'Active product count' },
+        inactive: { type: 'number', description: 'Inactive product count' },
+        featured: { type: 'number', description: 'Featured product count' },
+        avgPrice: { type: 'number', description: 'Average price' },
       },
     },
   })

@@ -5,6 +5,7 @@ import { AdminCampaignsService } from './admin-campaigns.service';
 import { Campaign, CampaignSchema } from '../../schemas/campaign.schema';
 import { Product, ProductSchema } from '../../schemas/product.schema';
 import { Category, CategorySchema } from '../../schemas/category.schema';
+import { MinioService } from '../../minio/minio.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { Category, CategorySchema } from '../../schemas/category.schema';
     ]),
   ],
   controllers: [AdminCampaignsController],
-  providers: [AdminCampaignsService],
+  providers: [AdminCampaignsService, MinioService],
   exports: [AdminCampaignsService],
 })
 export class AdminCampaignsModule {}

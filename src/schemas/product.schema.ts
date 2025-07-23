@@ -29,6 +29,9 @@ export class Product {
   @Prop({ required: true, min: 0 })
   price: number;
 
+  @Prop({ min: 0, default: 0 })
+  stock: number;
+
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
   category: Types.ObjectId;
 

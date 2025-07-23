@@ -8,8 +8,8 @@ export class SellerProfile {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
   sellerId: Types.ObjectId;
 
-  @Prop({ required: true })
-  storeName: string;
+  @Prop()
+  storeName?: string;
 
   @Prop()
   description?: string;

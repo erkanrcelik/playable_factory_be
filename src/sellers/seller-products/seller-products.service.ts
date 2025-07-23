@@ -9,7 +9,7 @@ import { Product, ProductDocument } from '../../schemas/product.schema';
 import { Category, CategoryDocument } from '../../schemas/category.schema';
 import { CreateProductDto, UpdateProductDto, FindAllProductsDto } from './dto';
 import { ProductError, ProductErrorMessages } from './enums';
-import { MinioService } from '../../common/services/minio.service';
+import { MinioService } from '../../minio/minio.service';
 
 @Injectable()
 export class SellerProductsService {
@@ -20,10 +20,10 @@ export class SellerProductsService {
   ) {}
 
   /**
-   * Satıcının ürünlerini listeler
-   * @param sellerId - Satıcı ID'si
-   * @param options - Filtreleme ve sayfalama seçenekleri
-   * @returns Ürün listesi ve sayfalama bilgileri
+   * List seller's products
+   * @param sellerId - Seller ID
+   * @param options - Filtering and pagination options
+   * @returns Product list and pagination information
    */
   async findAllProducts(sellerId: string, options: FindAllProductsDto) {
     const {
@@ -93,10 +93,10 @@ export class SellerProductsService {
   }
 
   /**
-   * Belirli bir ürünü getirir (sadece satıcının kendi ürünü)
-   * @param productId - Ürün ID'si
-   * @param sellerId - Satıcı ID'si
-   * @returns Ürün detayları
+   * Get a specific product (only seller's own product)
+   * @param productId - Product ID
+   * @param sellerId - Seller ID
+   * @returns Product details
    */
   async findOneProduct(productId: string, sellerId: string) {
     const product = await this.productModel
@@ -117,13 +117,13 @@ export class SellerProductsService {
   }
 
   /**
-   * Yeni ürün oluşturur
-   * @param createProductDto - Ürün oluşturma verileri
-   * @param sellerId - Satıcı ID'si
-   * @returns Oluşturulan ürün
+   * Create a new product
+   * @param createProductDto - Product creation data
+   * @param sellerId - Seller ID
+   * @returns Created product
    */
   async createProduct(createProductDto: CreateProductDto, sellerId: string) {
-    // Kategori kontrolü
+    // Category validation
     const category = await this.categoryModel.findById(
       createProductDto.category,
     );
@@ -144,11 +144,11 @@ export class SellerProductsService {
   }
 
   /**
-   * Ürün günceller (sadece satıcının kendi ürünü)
-   * @param productId - Ürün ID'si
-   * @param updateProductDto - Güncelleme verileri
-   * @param sellerId - Satıcı ID'si
-   * @returns Güncellenmiş ürün
+   * Update product (only seller's own product)
+   * @param productId - Product ID
+   * @param updateProductDto - Update data
+   * @param sellerId - Seller ID
+   * @returns Updated product
    */
   async updateProduct(
     productId: string,
@@ -167,7 +167,7 @@ export class SellerProductsService {
       );
     }
 
-    // Kategori güncelleniyorsa kontrol et
+    // Validate category if being updated
     if (updateProductDto.category) {
       const category = await this.categoryModel.findById(
         updateProductDto.category,
@@ -198,10 +198,10 @@ export class SellerProductsService {
   }
 
   /**
-   * Ürün siler (sadece satıcının kendi ürünü)
-   * @param productId - Ürün ID'si
-   * @param sellerId - Satıcı ID'si
-   * @returns Silme mesajı
+   * Delete product (only seller's own product)
+   * @param productId - Product ID
+   * @param sellerId - Seller ID
+   * @returns Deletion message
    */
   async deleteProduct(productId: string, sellerId: string) {
     const product = await this.productModel.findOne({
@@ -215,13 +215,17 @@ export class SellerProductsService {
       );
     }
 
-    // Ürün resimlerini MinIO'dan sil
+    // Delete product images from MinIO
     if (product.imageUrls && product.imageUrls.length > 0) {
       for (const imageUrl of product.imageUrls) {
         try {
-          await this.minioService.deleteFile(imageUrl);
+          await this.minioService.deleteFile(
+            'ecommerce',
+            imageUrl.split('/').pop() || '',
+          );
         } catch (error) {
-          console.error('Resim silme hatası:', error);
+          // Log error but don't throw - file might already be deleted
+          console.warn('Failed to delete product image:', error);
         }
       }
     }
@@ -232,10 +236,10 @@ export class SellerProductsService {
   }
 
   /**
-   * Ürün durumunu değiştirir (aktif/pasif)
-   * @param productId - Ürün ID'si
-   * @param sellerId - Satıcı ID'si
-   * @returns Güncellenmiş ürün
+   * Toggle product status (active/inactive)
+   * @param productId - Product ID
+   * @param sellerId - Seller ID
+   * @returns Updated product
    */
   async toggleProductStatus(productId: string, sellerId: string) {
     const product = await this.productModel.findOne({
@@ -256,18 +260,18 @@ export class SellerProductsService {
   }
 
   /**
-   * Ürün resmi yükler
-   * @param productId - Ürün ID'si
-   * @param file - Yüklenecek dosya
-   * @param sellerId - Satıcı ID'si
-   * @returns Yüklenen resim bilgileri
+   * Upload product image
+   * @param productId - Product ID
+   * @param file - File to upload
+   * @param sellerId - Seller ID
+   * @returns Uploaded image information
    */
   async uploadProductImage(
     productId: string,
     file: Express.Multer.File,
     sellerId: string,
   ) {
-    // Ürünün satıcıya ait olduğunu kontrol et
+    // Check if product belongs to seller
     const product = await this.productModel.findOne({
       _id: new Types.ObjectId(productId),
       sellerId: new Types.ObjectId(sellerId),
@@ -279,14 +283,14 @@ export class SellerProductsService {
       );
     }
 
-    // Dosya tipi kontrolü
+    // File type validation
     if (!file.mimetype.startsWith('image/')) {
       throw new BadRequestException(
         ProductErrorMessages[ProductError.INVALID_IMAGE_FORMAT],
       );
     }
 
-    // Dosya boyutu kontrolü (5MB)
+    // File size validation (5MB)
     if (file.size > 5 * 1024 * 1024) {
       throw new BadRequestException(
         ProductErrorMessages[ProductError.IMAGE_TOO_LARGE],
@@ -294,19 +298,19 @@ export class SellerProductsService {
     }
 
     try {
-      // MinIO'ya yükle
+      // Upload to MinIO
       const uploadResult = await this.minioService.uploadFile(file, 'products');
 
-      // Ürünün imageUrls array'ine ekle
-      product.imageUrls.push(uploadResult.key);
+      // Add to product's imageUrls array
+      product.imageUrls.push(uploadResult);
       await product.save();
 
-      // Presigned URL al
-      const imageUrl = uploadResult.url;
+      // Get presigned URL
+      const imageUrl = uploadResult;
 
       return {
         imageUrl,
-        imageKey: uploadResult.key,
+        imageKey: uploadResult.split('/').pop() || '',
         message: 'Image uploaded successfully',
       };
     } catch {
@@ -317,11 +321,11 @@ export class SellerProductsService {
   }
 
   /**
-   * Ürün resmini siler
-   * @param productId - Ürün ID'si
-   * @param imageKey - Silinecek resmin key'i
-   * @param sellerId - Satıcı ID'si
-   * @returns Silme mesajı
+   * Delete product image
+   * @param productId - Product ID
+   * @param imageKey - Image key to delete
+   * @param sellerId - Seller ID
+   * @returns Deletion message
    */
   async deleteProductImage(
     productId: string,
@@ -339,7 +343,7 @@ export class SellerProductsService {
       );
     }
 
-    // Resmin ürüne ait olduğunu kontrol et
+    // Check if image belongs to product
     if (!product.imageUrls.includes(imageKey)) {
       throw new BadRequestException(
         'This image does not belong to this product',
@@ -347,10 +351,10 @@ export class SellerProductsService {
     }
 
     try {
-      // MinIO'dan sil
-      await this.minioService.deleteFile(imageKey);
+      // Delete from MinIO
+      await this.minioService.deleteFile('ecommerce', imageKey);
 
-      // Ürünün imageUrls array'inden çıkar
+      // Remove from product's imageUrls array
       product.imageUrls = product.imageUrls.filter((url) => url !== imageKey);
       await product.save();
 
@@ -361,9 +365,9 @@ export class SellerProductsService {
   }
 
   /**
-   * Satıcının ürün istatistiklerini getirir
-   * @param sellerId - Satıcı ID'si
-   * @returns İstatistikler
+   * Get seller's product statistics
+   * @param sellerId - Seller ID
+   * @returns Statistics
    */
   async getProductStats(sellerId: string) {
     const stats = await this.productModel.aggregate([

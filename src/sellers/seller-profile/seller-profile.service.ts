@@ -11,7 +11,7 @@ import {
 } from '../../schemas/seller-profile.schema';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ProfileError, ProfileErrorMessages } from './enums/profile-error.enum';
-import { MinioService } from '../../common/services/minio.service';
+import { MinioService } from '../../minio/minio.service';
 
 @Injectable()
 export class SellerProfileService {
@@ -104,7 +104,7 @@ export class SellerProfileService {
         // Create new profile if not exists
         const newProfile = new this.sellerProfileModel({
           sellerId: new Types.ObjectId(sellerId),
-          logoUrl: uploadResult.key,
+          logoUrl: uploadResult,
           isActive: true,
         });
         await newProfile.save();
@@ -112,20 +112,24 @@ export class SellerProfileService {
         // Delete old logo if exists
         if (profile.logoUrl) {
           try {
-            await this.minioService.deleteFile(profile.logoUrl);
-          } catch {
-            console.error('Logo deletion error');
+            await this.minioService.deleteFile(
+              'ecommerce',
+              profile.logoUrl.split('/').pop() || '',
+            );
+          } catch (error) {
+            // Log error but don't throw - file might already be deleted
+            console.warn('Failed to delete old logo:', error);
           }
         }
 
         // Update profile with new logo
-        profile.logoUrl = uploadResult.key;
+        profile.logoUrl = uploadResult;
         await profile.save();
       }
 
       return {
-        logoUrl: uploadResult.url,
-        logoKey: uploadResult.key,
+        logoUrl: uploadResult,
+        logoKey: uploadResult.split('/').pop() || '',
         message: 'Logo uploaded successfully',
       };
     } catch {
@@ -155,7 +159,10 @@ export class SellerProfileService {
 
     try {
       // Delete from MinIO
-      await this.minioService.deleteFile(profile.logoUrl);
+      await this.minioService.deleteFile(
+        'ecommerce',
+        profile.logoUrl.split('/').pop() || '',
+      );
 
       // Update profile
       profile.logoUrl = undefined;

@@ -8,7 +8,7 @@ import { Model } from 'mongoose';
 import { Category, CategoryDocument } from '../../schemas/category.schema';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { CategoryError, CategoryErrorMessages } from './enums';
-import { MinioService } from '../../common/services/minio.service';
+import { MinioService } from '../../minio/minio.service';
 
 export interface FindAllOptions {
   page: number;
@@ -33,7 +33,7 @@ export class AdminCategoriesService {
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
-    // Aynı isimde kategori var mı kontrol et
+    // Check if category with same name exists
     const existingCategory = await this.categoryModel.findOne({
       name: { $regex: new RegExp(`^${createCategoryDto.name}$`, 'i') },
     });
@@ -103,10 +103,10 @@ export class AdminCategoriesService {
     id: string,
     updateCategoryDto: UpdateCategoryDto,
   ): Promise<Category> {
-    // Kategori var mı kontrol et
+    // Check if category exists
     const existingCategory = await this.categoryModel.findById(id);
     if (!existingCategory) {
-      throw new NotFoundException('Kategori bulunamadı');
+      throw new NotFoundException('Category not found');
     }
 
     // Check if name is being changed and if it conflicts with existing category
@@ -192,52 +192,59 @@ export class AdminCategoriesService {
     categoryId: string,
     file: Express.Multer.File,
   ): Promise<{ imageUrl: string; imageKey: string }> {
-    // Kategori var mı kontrol et
-    const category = await this.findOne(categoryId);
+    // Check if category exists
+    const category = await this.categoryModel.findById(categoryId);
     if (!category) {
       throw new NotFoundException(
         CategoryErrorMessages[CategoryError.CATEGORY_NOT_FOUND],
       );
     }
 
-    // Dosya tipini kontrol et
-    if (!file.mimetype.startsWith('image/')) {
-      throw new BadRequestException('Only image files are allowed');
-    }
+    // Upload image to MinIO
+    const uploadResult = await this.minioService.uploadFile(file, 'categories');
 
-    // Dosya boyutunu kontrol et (5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      throw new BadRequestException('File size must be less than 5MB');
-    }
+    // Update category with image URL
+    await this.categoryModel.findByIdAndUpdate(categoryId, {
+      image: uploadResult,
+    });
 
-    try {
-      // Eski resmi sil (varsa)
-      if (category.image) {
-        try {
-          await this.minioService.deleteFile(category.image);
-        } catch {
-          // Eski dosya silinmezse hata verme, devam et
-        }
-      }
+    return {
+      imageUrl: uploadResult,
+      imageKey: uploadResult.split('/').pop() || '',
+    };
+  }
 
-      // Yeni resmi yükle
-      const uploadResult = await this.minioService.uploadFile(
-        file,
-        'categories',
+  async deleteCategoryImage(
+    categoryId: string,
+  ): Promise<{ message: string; categoryId: string }> {
+    // Check if category exists
+    const category = await this.categoryModel.findById(categoryId);
+    if (!category) {
+      throw new NotFoundException(
+        CategoryErrorMessages[CategoryError.CATEGORY_NOT_FOUND],
       );
-
-      // Kategoriyi güncelle
-      await this.categoryModel.findByIdAndUpdate(categoryId, {
-        image: uploadResult.key,
-      });
-
-      return {
-        imageUrl: uploadResult.url,
-        imageKey: uploadResult.key,
-      };
-    } catch {
-      throw new BadRequestException('Failed to upload image');
     }
+
+    // Delete image from MinIO if exists
+    if (category.image) {
+      try {
+        await this.minioService.deleteFile(
+          'ecommerce',
+          category.image.split('/').pop() || '',
+        );
+      } catch {
+        // Log error but don't fail the request
+      }
+    }
+
+    // Remove image URL from category
+    await this.categoryModel.findByIdAndUpdate(categoryId, {
+      $unset: { image: 1 },
+    });
+
+    return {
+      message: 'Category image deleted successfully',
+      categoryId,
+    };
   }
 }

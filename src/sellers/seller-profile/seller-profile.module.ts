@@ -6,6 +6,7 @@ import {
 } from '../../schemas/seller-profile.schema';
 import { SellerProfileController } from './seller-profile.controller';
 import { SellerProfileService } from './seller-profile.service';
+import { MinioService } from '../../minio/minio.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { SellerProfileService } from './seller-profile.service';
     ]),
   ],
   controllers: [SellerProfileController],
-  providers: [SellerProfileService],
+  providers: [SellerProfileService, MinioService],
   exports: [SellerProfileService],
 })
 export class SellerProfileModule {}

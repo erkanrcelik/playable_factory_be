@@ -17,7 +17,7 @@ export class Review {
   @Prop({ required: true })
   comment: string;
 
-  @Prop({ default: false })
+  @Prop({ default: true })
   isApproved: boolean;
 }
 

@@ -21,6 +21,56 @@ export class ReviewsService {
   ) {}
 
   /**
+   * Get customer's own reviews
+   */
+  async getCustomerReviews(userId: string, options: FindAllReviewsDto) {
+    const {
+      page = 1,
+      limit = 10,
+      rating,
+      isApproved,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = options;
+
+    const query: any = {
+      userId: new Types.ObjectId(userId),
+    };
+
+    if (rating) {
+      query.rating = rating;
+    }
+
+    if (isApproved !== undefined) {
+      query.isApproved = isApproved;
+    }
+
+    const sortOptions: any = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      this.reviewModel
+        .find(query)
+        .populate('productId', 'name imageUrls')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.reviewModel.countDocuments(query),
+    ]);
+
+    return {
+      data: reviews,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
    * Get all reviews with filtering and pagination
    */
   async findAllReviews(options: FindAllReviewsDto) {
@@ -148,7 +198,7 @@ export class ReviewsService {
       userId: new Types.ObjectId(userId),
       rating,
       comment,
-      isApproved: false, // Reviews need admin approval
+      isApproved: true, // Reviews are automatically approved
     });
 
     await review.save();
@@ -188,7 +238,7 @@ export class ReviewsService {
     const updatedReview = await this.reviewModel
       .findByIdAndUpdate(
         reviewId,
-        { ...updateReviewDto, isApproved: false }, // Reset approval status
+        { ...updateReviewDto, isApproved: true }, // Keep approved status
         { new: true },
       )
       .populate('productId', 'name imageUrls')
@@ -224,6 +274,7 @@ export class ReviewsService {
 
   /**
    * Approve review (admin only)
+   * Note: Currently reviews are auto-approved, this method is kept for future use
    */
   async approveReview(reviewId: string) {
     const review = await this.reviewModel.findById(reviewId).exec();
@@ -246,6 +297,7 @@ export class ReviewsService {
 
   /**
    * Reject review (admin only)
+   * Note: Currently reviews are auto-approved, this method is kept for future use
    */
   async rejectReview(reviewId: string) {
     const review = await this.reviewModel.findById(reviewId).exec();

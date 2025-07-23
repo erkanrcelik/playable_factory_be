@@ -12,6 +12,11 @@ export const updateProductSchema = z.object({
     .max(1000, 'Description cannot exceed 1000 characters')
     .optional(),
   price: z.number().min(0.01, 'Price must be at least 0.01').optional(),
+  stock: z
+    .number()
+    .int()
+    .min(0, 'Stock quantity must be 0 or greater')
+    .optional(),
   category: z.string().min(1, 'Category selection is required').optional(),
   specifications: z.record(z.string(), z.string()).optional(),
   tags: z.array(z.string()).optional(),

@@ -18,6 +18,7 @@ import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
 import { CartError, CartErrorMessages } from './enums/cart-error.enum';
+import { OrdersService } from '../orders/orders.service';
 
 export interface CartItem {
   productId: string;
@@ -49,6 +50,7 @@ export class CartService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
+    private ordersService: OrdersService,
   ) {}
 
   /**
@@ -79,10 +81,7 @@ export class CartService {
     const { productId, quantity } = addToCartDto;
 
     // Validate product exists and is active
-    const product = await this.productModel
-      .findById(productId)
-      .populate('sellerId', 'firstName lastName')
-      .exec();
+    const product = await this.productModel.findById(productId).exec();
 
     if (!product || !product.isActive) {
       throw new NotFoundException(
@@ -90,11 +89,8 @@ export class CartService {
       );
     }
 
-    // Check stock availability (for products without variants)
-    const totalStock =
-      product.variants.length > 0
-        ? product.variants.reduce((sum, variant) => sum + variant.stock, 0)
-        : 0;
+    // Check stock availability
+    const totalStock = product.stock || 0;
 
     if (totalStock < quantity) {
       throw new BadRequestException(
@@ -164,10 +160,7 @@ export class CartService {
       );
     }
 
-    const totalStock =
-      product.variants.length > 0
-        ? product.variants.reduce((sum, variant) => sum + variant.stock, 0)
-        : 0;
+    const totalStock = product.stock || 0;
 
     if (totalStock < quantity) {
       throw new BadRequestException(
@@ -388,11 +381,7 @@ export class CartService {
         throw new NotFoundException(`Product not found: ${item.name}`);
       }
 
-      const totalStock =
-        product.variants.length > 0
-          ? product.variants.reduce((sum, variant) => sum + variant.stock, 0)
-          : 0;
-
+      const totalStock = product.stock || 0;
       if (totalStock < item.quantity) {
         throw new BadRequestException(
           `Insufficient stock for product: ${item.name}`,
@@ -407,29 +396,40 @@ export class CartService {
       throw new BadRequestException('Payment failed: ' + paymentResult.message);
     }
 
-    // Create order (this would be handled by order service)
-    // const orderData = {
-    //   userId,
-    //   items: cart.items,
-    //   shippingAddress: checkoutDto.shippingAddress,
-    //   billingAddress: checkoutDto.billingAddress,
-    //   paymentMethod: checkoutDto.paymentMethod,
-    //   subtotal: cart.subtotal,
-    //   totalDiscount: cart.totalDiscount,
-    //   total: cart.total,
-    //   appliedCampaigns: cart.appliedCampaigns,
-    //   notes: checkoutDto.notes,
-    //   paymentTransactionId: paymentResult.transactionId,
-    // };
+    // Create order through Orders Service
+    const orderData = {
+      items: cart.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        sellerId: item.sellerId,
+      })),
+      shippingAddress: checkoutDto.shippingAddress,
+      paymentStatus: paymentResult.success
+        ? ('paid' as any)
+        : ('pending' as any),
+      notes: checkoutDto.notes,
+      paymentTransactionId: paymentResult.transactionId,
+      appliedCampaigns: cart.appliedCampaigns,
+      subtotal: cart.subtotal,
+      totalDiscount: cart.totalDiscount,
+    };
 
-    // Clear cart after successful checkout
+    // Create real order using OrdersService
+    const createdOrder = await this.ordersService.createOrder(
+      userId,
+      orderData,
+    );
+
+    // Clear cart after successful order creation
     await this.clearCart(userId);
 
     return {
       message: 'Order placed successfully',
-      orderId: 'ORDER_' + Date.now(), // This would be the actual order ID
+      orderId: createdOrder._id,
       transactionId: paymentResult.transactionId,
       total: cart.total,
+      order: createdOrder,
     };
   }
 

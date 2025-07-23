@@ -42,7 +42,7 @@ export interface SellerWithProfile {
   updatedAt: Date;
   profile: {
     _id: string;
-    storeName: string;
+    storeName?: string;
     description?: string;
     isActive: boolean;
     logoUrl?: string;

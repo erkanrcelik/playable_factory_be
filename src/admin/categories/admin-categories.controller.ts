@@ -166,7 +166,6 @@ export class AdminCategoriesController {
 
   @Post(':id/upload-image')
   @UseInterceptors(FileInterceptor('image'))
-  @UsePipes(new ZodValidationPipe(createCategorySchema))
   @ApiOperation({ summary: 'Upload category image' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({
@@ -196,6 +195,27 @@ export class AdminCategoriesController {
       throw new BadRequestException('Image file is required');
     }
     return this.adminCategoriesService.uploadCategoryImage(id, file);
+  }
+
+  @Delete(':id/image')
+  @ApiOperation({ summary: 'Delete category image' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category image deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Success message' },
+        categoryId: { type: 'string', description: 'Category ID' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found',
+  })
+  async deleteCategoryImage(@Param('id') id: string) {
+    return this.adminCategoriesService.deleteCategoryImage(id);
   }
 
   @Get('stats/overview')

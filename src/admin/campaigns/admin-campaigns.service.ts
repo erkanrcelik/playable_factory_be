@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MinioService } from '../../minio/minio.service';
 import {
   Campaign,
   CampaignDocument,
@@ -77,6 +78,7 @@ export class AdminCampaignsService {
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    private minioService: MinioService,
   ) {}
 
   async createPlatformCampaign(
@@ -403,5 +405,114 @@ export class AdminCampaignsService {
       upcoming,
       expired,
     };
+  }
+
+  /**
+   * Upload campaign image
+   *
+   * @param campaignId - Campaign ID
+   * @param file - Image file to upload
+   * @returns Upload result with image URL
+   */
+  async uploadCampaignImage(campaignId: string, file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Invalid file type. Only JPEG, PNG and WebP are allowed',
+      );
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size too large. Maximum size is 5MB');
+    }
+
+    // Find campaign
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) {
+      throw new NotFoundException(
+        CampaignErrorMessages[CampaignError.CAMPAIGN_NOT_FOUND],
+      );
+    }
+
+    try {
+      // Delete existing image if exists
+      if (campaign.imageUrl) {
+        try {
+          // Extract the key from URL (assumes the key is the last part)
+          const urlParts = campaign.imageUrl.split('/');
+          const existingKey = urlParts.slice(-2).join('/'); // Get folder/filename
+          if (existingKey) {
+            await this.minioService.deleteFile('ecommerce', existingKey);
+          }
+        } catch {
+          // Log error but don't fail the upload
+        }
+      }
+
+      // Upload new image
+      const uploadResult = await this.minioService.uploadFile(
+        file,
+        'campaigns',
+      );
+      const imageUrl = uploadResult;
+
+      // Update campaign with new image URL
+      await this.campaignModel.findByIdAndUpdate(campaignId, { imageUrl });
+
+      return {
+        message: 'Image uploaded successfully',
+        imageUrl,
+        campaignId,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to upload image: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete campaign image
+   *
+   * @param campaignId - Campaign ID
+   * @returns Deletion result
+   */
+  async deleteCampaignImage(campaignId: string) {
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) {
+      throw new NotFoundException(
+        CampaignErrorMessages[CampaignError.CAMPAIGN_NOT_FOUND],
+      );
+    }
+
+    if (!campaign.imageUrl) {
+      throw new BadRequestException('Campaign has no image to delete');
+    }
+
+    try {
+      // Delete image from MinIO
+      const urlParts = campaign.imageUrl.split('/');
+      const imageKey = urlParts.slice(-2).join('/'); // Get folder/filename
+      if (imageKey) {
+        await this.minioService.deleteFile('ecommerce', imageKey);
+      }
+
+      // Remove image URL from campaign
+      await this.campaignModel.findByIdAndUpdate(campaignId, {
+        $unset: { imageUrl: 1 },
+      });
+
+      return {
+        message: 'Image deleted successfully',
+        campaignId,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to delete image: ${error.message}`);
+    }
   }
 }

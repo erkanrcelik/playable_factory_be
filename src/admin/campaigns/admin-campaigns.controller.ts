@@ -11,7 +11,10 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   UsePipes,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -476,6 +479,84 @@ export class AdminCampaignsController {
     @Param('id') id: string,
   ): Promise<CampaignWithDetails> {
     return this.adminCampaignsService.toggleCampaignStatus(id);
+  }
+
+  /**
+   * Upload campaign image
+   *
+   * @param campaignId - Campaign ID
+   * @param file - Image file to upload
+   * @returns Upload result with image URL
+   */
+  @Post(':id/image')
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiOperation({
+    summary: 'Upload campaign image',
+    description: 'Upload banner image for a campaign',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Campaign ID',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Image uploaded successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Image uploaded successfully' },
+        imageUrl: {
+          type: 'string',
+          example: 'https://example.com/campaign-image.jpg',
+        },
+        campaignId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid file format or size' })
+  @ApiResponse({ status: 404, description: 'Campaign not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async uploadCampaignImage(
+    @Param('id') campaignId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.adminCampaignsService.uploadCampaignImage(campaignId, file);
+  }
+
+  /**
+   * Delete campaign image
+   *
+   * @param campaignId - Campaign ID
+   * @returns Deletion result
+   */
+  @Delete(':id/image')
+  @ApiOperation({
+    summary: 'Delete campaign image',
+    description: 'Remove banner image from a campaign',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Campaign ID',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Image deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Image deleted successfully' },
+        campaignId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Campaign not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async deleteCampaignImage(@Param('id') campaignId: string) {
+    return this.adminCampaignsService.deleteCampaignImage(campaignId);
   }
 
   @Get('stats/overview')
