@@ -21,7 +21,7 @@ export class ReviewsService {
   ) {}
 
   /**
-   * Get customer's own reviews
+   * Get customer reviews with filtering and pagination
    */
   async getCustomerReviews(userId: string, options: FindAllReviewsDto) {
     const {
@@ -42,7 +42,7 @@ export class ReviewsService {
     }
 
     if (isApproved !== undefined) {
-      query.isApproved = isApproved;
+      query.isApproved = Boolean(isApproved);
     }
 
     const sortOptions: any = {};
@@ -94,10 +94,15 @@ export class ReviewsService {
       query.rating = rating;
     }
 
+    // isApproved parametresi gönderilirse true, gönderilmezse false
     if (isApproved !== undefined) {
-      query.isApproved = isApproved;
+      query.isApproved = true; // Parametre gönderildi, true olarak algıla
+    } else {
+      query.isApproved = false; // Parametre gönderilmedi, false olarak algıla
     }
+    console.log('Filtering by isApproved:', isApproved, 'Query isApproved:', query.isApproved);
 
+    console.log('Final query:', JSON.stringify(query));
     const sortOptions: any = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
@@ -114,6 +119,9 @@ export class ReviewsService {
         .lean(),
       this.reviewModel.countDocuments(query),
     ]);
+
+    console.log('Found reviews:', reviews.length, 'Total:', total);
+    console.log('First review isApproved:', reviews[0]?.isApproved);
 
     return {
       data: reviews,
@@ -269,7 +277,9 @@ export class ReviewsService {
 
     await this.reviewModel.findByIdAndDelete(reviewId).exec();
 
-    return { message: 'Review deleted successfully' };
+    return {
+      message: 'Review deleted successfully',
+    };
   }
 
   /**
@@ -317,7 +327,7 @@ export class ReviewsService {
   }
 
   /**
-   * Get review statistics for a product
+   * Get product review statistics
    */
   async getProductReviewStats(productId: string) {
     const stats = await this.reviewModel.aggregate([
@@ -330,8 +340,8 @@ export class ReviewsService {
       {
         $group: {
           _id: null,
-          totalReviews: { $sum: 1 },
           averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 },
           ratingDistribution: {
             $push: '$rating',
           },
@@ -341,8 +351,8 @@ export class ReviewsService {
 
     if (stats.length === 0) {
       return {
-        totalReviews: 0,
         averageRating: 0,
+        totalReviews: 0,
         ratingDistribution: {
           1: 0,
           2: 0,
@@ -353,22 +363,17 @@ export class ReviewsService {
       };
     }
 
-    const stat = stats[0];
-    const ratingDistribution = {
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-    };
-
-    stat.ratingDistribution.forEach((rating: number) => {
-      ratingDistribution[rating as keyof typeof ratingDistribution]++;
-    });
+    const ratingDistribution = stats[0].ratingDistribution.reduce(
+      (acc: any, rating: number) => {
+        acc[rating] = (acc[rating] || 0) + 1;
+        return acc;
+      },
+      {},
+    );
 
     return {
-      totalReviews: stat.totalReviews,
-      averageRating: Math.round(stat.averageRating * 10) / 10,
+      averageRating: Math.round(stats[0].averageRating * 10) / 10,
+      totalReviews: stats[0].totalReviews,
       ratingDistribution,
     };
   }

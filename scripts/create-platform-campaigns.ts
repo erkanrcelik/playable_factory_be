@@ -14,8 +14,8 @@ const platformCampaigns = [
     name: 'Elektronik Fırsatları',
     description: 'En yeni elektronik ürünlerde %20\'ye varan indirimler!',
     discountPercentage: 20,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 gün sonra
+    startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 gün önce başladı
+    endDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25 gün sonra bitiyor
     isActive: true,
     categoryName: 'Electronics',
     imageUrl: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=800&h=400&fit=crop'
@@ -24,8 +24,8 @@ const platformCampaigns = [
     name: 'Moda Sezonu',
     description: 'Yeni sezon kıyafetlerde %30 indirim fırsatı!',
     discountPercentage: 30,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25 gün sonra
+    startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 gün önce başladı
+    endDate: new Date(Date.now() + 22 * 24 * 60 * 60 * 1000), // 22 gün sonra bitiyor
     isActive: true,
     categoryName: 'Clothing',
     imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop'
@@ -34,8 +34,8 @@ const platformCampaigns = [
     name: 'Ev & Bahçe İndirimi',
     description: 'Ev ve bahçe ürünlerinde %25 indirim!',
     discountPercentage: 25,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000), // 35 gün sonra
+    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 gün önce başladı
+    endDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000), // 28 gün sonra bitiyor
     isActive: true,
     categoryName: 'Home and Garden',
     imageUrl: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=400&fit=crop'
@@ -44,8 +44,8 @@ const platformCampaigns = [
     name: 'Spor & Fitness',
     description: 'Spor ekipmanlarında %15 indirim!',
     discountPercentage: 15,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // 20 gün sonra
+    startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 gün önce başladı
+    endDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), // 18 gün sonra bitiyor
     isActive: true,
     categoryName: 'Sports',
     imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=400&fit=crop'
@@ -54,8 +54,8 @@ const platformCampaigns = [
     name: 'Kitap Haftası',
     description: 'Tüm kitaplarda %40 indirim!',
     discountPercentage: 40,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 gün sonra
+    startDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 gün önce başladı
+    endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 gün sonra bitiyor
     isActive: true,
     categoryName: 'Books',
     imageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop'
@@ -64,8 +64,8 @@ const platformCampaigns = [
     name: 'Güzellik & Sağlık',
     description: 'Kozmetik ve sağlık ürünlerinde %35 indirim!',
     discountPercentage: 35,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000), // 28 gün sonra
+    startDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 gün önce başladı
+    endDate: new Date(Date.now() + 27 * 24 * 60 * 60 * 1000), // 27 gün sonra bitiyor
     isActive: true,
     categoryName: 'Health and Beauty',
     imageUrl: 'https://images.unsplash.com/photo-1559591935-c7c65d8c7633?w=800&h=400&fit=crop'
@@ -74,8 +74,8 @@ const platformCampaigns = [
     name: 'Oyuncak Festivali',
     description: 'Çocuk oyuncaklarında %50\'ye varan indirimler!',
     discountPercentage: 50,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 22 * 24 * 60 * 60 * 1000), // 22 gün sonra
+    startDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 gün önce başladı
+    endDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), // 18 gün sonra bitiyor
     isActive: true,
     categoryName: 'Toys',
     imageUrl: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=800&h=400&fit=crop'
@@ -84,8 +84,8 @@ const platformCampaigns = [
     name: 'Gıda & İçecek',
     description: 'Taze gıda ürünlerinde %10 indirim!',
     discountPercentage: 10,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), // 18 gün sonra
+    startDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), // 6 gün önce başladı
+    endDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12 gün sonra bitiyor
     isActive: true,
     categoryName: 'Food',
     imageUrl: 'https://images.unsplash.com/photo-1504674900240-8947e31be3f8?w=800&h=400&fit=crop'

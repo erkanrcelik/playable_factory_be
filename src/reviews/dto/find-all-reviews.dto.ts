@@ -19,7 +19,7 @@ export const findAllReviewsSchema = z.object({
     .min(1, 'Rating must be at least 1')
     .max(5, 'Rating cannot exceed 5')
     .optional(),
-  isApproved: z.coerce.boolean().optional(),
+  isApproved: z.boolean().optional(),
   sortBy: z.enum(['rating', 'createdAt', 'updatedAt']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });

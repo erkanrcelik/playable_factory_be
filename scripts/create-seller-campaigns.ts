@@ -13,8 +13,8 @@ const sellerCampaigns = [
     name: 'Elektronik Mağazası Kampanyası',
     description: 'Tüm elektronik ürünlerde %15 indirim!',
     discountPercentage: 15,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // 20 gün sonra
+    startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 gün önce başladı
+    endDate: new Date(Date.now() + 17 * 24 * 60 * 60 * 1000), // 17 gün sonra bitiyor
     sellerEmail: 'techmart_master@example.com',
     imageUrl: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=800&h=400&fit=crop'
   },
@@ -22,8 +22,8 @@ const sellerCampaigns = [
     name: 'Moda Butik İndirimi',
     description: 'Yeni sezon kıyafetlerde %25 indirim!',
     discountPercentage: 25,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), // 18 gün sonra
+    startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 gün önce başladı
+    endDate: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000), // 13 gün sonra bitiyor
     sellerEmail: 'fashionhouse_master@example.com',
     imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop'
   },
@@ -31,8 +31,8 @@ const sellerCampaigns = [
     name: 'Ev & Dekor Fırsatları',
     description: 'Ev dekorasyon ürünlerinde %20 indirim!',
     discountPercentage: 20,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25 gün sonra
+    startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 gün önce başladı
+    endDate: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000), // 23 gün sonra bitiyor
     sellerEmail: 'homeplus_master@example.com',
     imageUrl: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=400&fit=crop'
   },
@@ -40,8 +40,8 @@ const sellerCampaigns = [
     name: 'Spor Ekipmanları Kampanyası',
     description: 'Tüm spor ekipmanlarında %30 indirim!',
     discountPercentage: 30,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 gün sonra
+    startDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 gün önce başladı
+    endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 gün sonra bitiyor
     sellerEmail: 'sportsworld_master@example.com',
     imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=400&fit=crop'
   },
@@ -49,8 +49,8 @@ const sellerCampaigns = [
     name: 'Kitapçı Özel İndirimi',
     description: 'Tüm kitaplarda %40 indirim!',
     discountPercentage: 40,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12 gün sonra
+    startDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 gün önce başladı
+    endDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8 gün sonra bitiyor
     sellerEmail: 'lifestyle_master@example.com',
     imageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop'
   }

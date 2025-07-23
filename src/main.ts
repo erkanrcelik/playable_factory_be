@@ -26,8 +26,17 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
  * @throws {Error} If application fails to start
  */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  // CORS configuration - allow all origins
+  app.enableCors({
+    origin: true, // Allow all origins
+    credentials: true, // Allow credentials
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    maxAge: 86400, // 24 hours
+  });
 
   // Global exception filter for standardized error handling
   app.useGlobalFilters(new GlobalExceptionFilter());
