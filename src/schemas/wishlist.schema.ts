@@ -23,6 +23,9 @@ export class Wishlist {
   isActive: boolean;
 }
 
-// Create compound index to prevent duplicate entries
+// Create compound index to prevent duplicate active entries
 export const WishlistSchema = SchemaFactory.createForClass(Wishlist);
-WishlistSchema.index({ userId: 1, productId: 1 }, { unique: true });
+WishlistSchema.index(
+  { userId: 1, productId: 1, isActive: 1 },
+  { unique: true, partialFilterExpression: { isActive: true } },
+);

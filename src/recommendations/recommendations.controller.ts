@@ -6,6 +6,7 @@ import {
   Query,
   UseGuards,
   Request,
+  Body,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -63,6 +64,7 @@ export class RecommendationsController {
     @Request() req,
     @Query('productId') productId: string,
     @Query('activityType') activityType: 'view' | 'purchase' | 'cart_add',
+    @Body() body?: any,
   ) {
     await this.recommendationsService.trackUserActivity(
       req.user.id,
@@ -73,14 +75,14 @@ export class RecommendationsController {
   }
 
   /**
-   * Get personalized product recommendations
+   * Get personalized product recommendations (User-specific)
    */
   @Get('personalized')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Get personalized recommendations',
     description:
-      'Get personalized product recommendations based on user activity',
+      'Get personalized product recommendations based on user activity and preferences',
   })
   @ApiQuery({
     name: 'limit',
@@ -124,7 +126,99 @@ export class RecommendationsController {
   }
 
   /**
-   * Get frequently bought together recommendations
+   * Get user's most viewed products (User-specific)
+   */
+  @Get('my-most-viewed')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get user\'s most viewed products',
+    description: 'Get products that the user has viewed most frequently',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of products to return (default: 10)',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Most viewed products retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          name: { type: 'string' },
+          description: { type: 'string' },
+          price: { type: 'number' },
+          discountedPrice: { type: 'number' },
+          imageUrls: { type: 'array', items: { type: 'string' } },
+          category: { type: 'object' },
+          seller: { type: 'object' },
+          hasDiscount: { type: 'boolean' },
+          discountPercentage: { type: 'number' },
+          viewCount: { type: 'number', description: 'Number of times viewed' },
+        },
+      },
+    },
+  })
+  @ApiBearerAuth()
+  async getMostViewedProducts(
+    @Request() req,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.recommendationsService.getMostViewedProducts(
+      req.user.id,
+      limit,
+    );
+  }
+
+  /**
+   * Get featured products (Public - everyone can see)
+   */
+  @Get('featured')
+  @ApiOperation({
+    summary: 'Get featured products',
+    description: 'Get products marked as featured by sellers',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of products to return (default: 10)',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured products retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          name: { type: 'string' },
+          description: { type: 'string' },
+          price: { type: 'number' },
+          discountedPrice: { type: 'number' },
+          imageUrls: { type: 'array', items: { type: 'string' } },
+          category: { type: 'object' },
+          seller: { type: 'object' },
+          hasDiscount: { type: 'boolean' },
+          discountPercentage: { type: 'number' },
+          isFeatured: { type: 'boolean' },
+        },
+      },
+    },
+  })
+  async getFeaturedProducts(@Query('limit') limit: number = 10) {
+    return this.recommendationsService.getFeaturedProducts(limit);
+  }
+
+  /**
+   * Get frequently bought together recommendations (Public)
    */
   @Get('frequently-bought-together/:productId')
   @ApiOperation({
@@ -182,7 +276,7 @@ export class RecommendationsController {
   }
 
   /**
-   * Get popular products
+   * Get popular products (Public)
    */
   @Get('popular')
   @ApiOperation({
@@ -224,7 +318,7 @@ export class RecommendationsController {
   }
 
   /**
-   * Get category-based recommendations
+   * Get category-based recommendations (Public)
    */
   @Get('category/:categoryId')
   @ApiOperation({
@@ -280,7 +374,7 @@ export class RecommendationsController {
   }
 
   /**
-   * Get recommendations based on browsing history
+   * Get recommendations based on browsing history (User-specific)
    */
   @Get('browsing-history')
   @UseGuards(JwtAuthGuard)

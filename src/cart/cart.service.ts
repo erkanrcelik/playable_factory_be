@@ -19,15 +19,25 @@ import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
 import { CartError, CartErrorMessages } from './enums/cart-error.enum';
 import { OrdersService } from '../orders/orders.service';
+import { RecommendationsService } from '../recommendations/recommendations.service';
 
 export interface CartItem {
   productId: string;
   quantity: number;
   price: number;
   name: string;
-  imageUrl?: string;
+  description: string;
+  imageUrls: string[];
+  category: {
+    _id: string;
+    name: string;
+  };
   sellerId: string;
   sellerName: string;
+  stock: number;
+  hasDiscount: boolean;
+  discountedPrice?: number;
+  discountPercentage?: number;
 }
 
 export interface Cart {
@@ -51,6 +61,7 @@ export class CartService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     private ordersService: OrdersService,
+    private recommendationsService: RecommendationsService,
   ) {}
 
   /**
@@ -71,7 +82,48 @@ export class CartService {
       };
     }
 
-    return cart;
+    // Update cart items with latest product information
+    const updatedItems = await Promise.all(
+      cart.items.map(async (item) => {
+        const product = await this.productModel.findById(item.productId)
+          .populate('category', 'name')
+          .populate('sellerId', 'firstName lastName')
+          .exec();
+
+        if (!product) {
+          return item; // Keep existing item if product not found
+        }
+
+        // Calculate discount
+        const discountedPrice = await this.getDiscountedPrice(product);
+        const hasDiscount = discountedPrice !== null && discountedPrice < product.price;
+        const discountPercentage = hasDiscount
+          ? Math.round(((product.price - discountedPrice) / product.price) * 100)
+          : 0;
+
+        return {
+          ...item,
+          name: product.name,
+          description: product.description,
+          imageUrls: product.imageUrls || [],
+          category: {
+            _id: (product.category as any)?._id?.toString() || '',
+            name: (product.category as any)?.name || '',
+          },
+          sellerId: (product.sellerId as any)?._id?.toString() || product.sellerId?.toString() || '',
+          sellerName: `${(product.sellerId as any)?.firstName || ''} ${(product.sellerId as any)?.lastName || ''}`,
+          stock: product.stock || 0,
+          hasDiscount,
+          discountedPrice: discountedPrice || undefined,
+          discountPercentage,
+        };
+      }),
+    );
+
+    return {
+      ...cart,
+      items: updatedItems,
+    };
   }
 
   /**
@@ -81,7 +133,10 @@ export class CartService {
     const { productId, quantity } = addToCartDto;
 
     // Validate product exists and is active
-    const product = await this.productModel.findById(productId).exec();
+    const product = await this.productModel.findById(productId)
+      .populate('category', 'name')
+      .populate('sellerId', 'firstName lastName')
+      .exec();
 
     if (!product || !product.isActive) {
       throw new NotFoundException(
@@ -116,9 +171,18 @@ export class CartService {
         quantity,
         price: product.price,
         name: product.name,
-        imageUrl: product.imageUrls?.[0],
-        sellerId: product.sellerId.toString(),
-        sellerName: `${(product.sellerId as any).firstName} ${(product.sellerId as any).lastName}`,
+        description: product.description,
+        imageUrls: product.imageUrls || [],
+        category: {
+          _id: (product.category as any)?._id?.toString() || '',
+          name: (product.category as any)?.name || '',
+        },
+        sellerId: (product.sellerId as any)?._id?.toString() || product.sellerId?.toString() || '',
+        sellerName: `${(product.sellerId as any)?.firstName || ''} ${(product.sellerId as any)?.lastName || ''}`,
+        stock: product.stock || 0,
+        hasDiscount: false, // Will be calculated later
+        discountedPrice: undefined, // Will be calculated later
+        discountPercentage: 0, // Will be calculated later
       });
     }
 
@@ -153,7 +217,10 @@ export class CartService {
     }
 
     // Validate product stock
-    const product = await this.productModel.findById(productId).exec();
+    const product = await this.productModel.findById(productId)
+      .populate('category', 'name')
+      .populate('sellerId', 'firstName lastName')
+      .exec();
     if (!product) {
       throw new NotFoundException(
         CartErrorMessages[CartError.PRODUCT_NOT_FOUND],
@@ -317,6 +384,43 @@ export class CartService {
   }
 
   /**
+   * Get discounted price for a product based on active campaigns
+   */
+  private async getDiscountedPrice(product: any): Promise<number | null> {
+    const now = new Date();
+
+    const campaigns = await this.campaignModel
+      .find({
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        $or: [
+          { productIds: product._id },
+          { categoryIds: product.category },
+          {
+            $and: [{ productIds: { $size: 0 } }, { categoryIds: { $size: 0 } }],
+          },
+        ],
+      })
+      .lean();
+
+    if (!campaigns.length) return null;
+
+    let minPrice = product.price;
+    for (const campaign of campaigns) {
+      let discounted = product.price;
+      if (campaign.discountType === 'percentage') {
+        discounted = product.price * (1 - campaign.discountValue / 100);
+      } else if (campaign.discountType === 'amount') {
+        discounted = product.price - campaign.discountValue;
+      }
+      if (discounted < minPrice) minPrice = discounted;
+    }
+
+    return Math.max(0, Math.round(minPrice * 100) / 100);
+  }
+
+  /**
    * Calculate discount for a specific campaign
    */
   private calculateCampaignDiscount(
@@ -459,5 +563,50 @@ export class CartService {
         message: 'Payment declined by bank',
       };
     }
+  }
+
+  /**
+   * Get cart screen data with recommendations
+   */
+  async getCartScreenData(userId: string, limit: number = 6): Promise<any> {
+    // Get cart data
+    const cart = await this.getCart(userId);
+
+    // Get recommendations based on cart items
+    let frequentlyBoughtTogether: any[] = [];
+    let personalized: any[] = [];
+    let popular: any[] = [];
+
+    try {
+      // If cart has items, get frequently bought together for first item
+      if (cart.items.length > 0) {
+        const firstProductId = cart.items[0].productId;
+        frequentlyBoughtTogether = await this.recommendationsService.getFrequentlyBoughtTogether(
+          firstProductId,
+          limit,
+        );
+      }
+
+      // Get personalized recommendations
+      personalized = await this.recommendationsService.getPersonalizedRecommendations(
+        userId,
+        limit,
+      );
+
+      // Get popular products
+      popular = await this.recommendationsService.getPopularProducts(limit);
+    } catch (error) {
+      // If recommendations fail, return empty arrays
+      console.error('Recommendations error:', error);
+    }
+
+    return {
+      cart,
+      recommendations: {
+        frequentlyBoughtTogether,
+        personalized,
+        popular,
+      },
+    };
   }
 }

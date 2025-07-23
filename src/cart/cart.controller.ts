@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +15,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CartService } from './cart.service';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -81,6 +83,56 @@ export class CartController {
   })
   async getCart(@CurrentUser('id') userId: string) {
     return this.cartService.getCart(userId);
+  }
+
+  /**
+   * Get cart screen data with recommendations
+   */
+  @Get('screen')
+  @ApiOperation({
+    summary: 'Get cart screen data',
+    description: 'Get cart data with recommendations for cart screen',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of recommendations to return (default: 6)',
+    example: 6,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cart screen data retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        cart: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string' },
+            items: { type: 'array' },
+            subtotal: { type: 'number' },
+            totalDiscount: { type: 'number' },
+            total: { type: 'number' },
+            appliedCampaigns: { type: 'array' },
+          },
+        },
+        recommendations: {
+          type: 'object',
+          properties: {
+            frequentlyBoughtTogether: { type: 'array' },
+            personalized: { type: 'array' },
+            popular: { type: 'array' },
+          },
+        },
+      },
+    },
+  })
+  async getCartScreenData(
+    @CurrentUser('id') userId: string,
+    @Query('limit') limit: number = 6,
+  ) {
+    return this.cartService.getCartScreenData(userId, limit);
   }
 
   /**

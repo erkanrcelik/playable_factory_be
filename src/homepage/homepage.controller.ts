@@ -1,11 +1,13 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { HomepageService } from './homepage.service';
 
 /**
@@ -65,11 +67,82 @@ export class HomepageController {
             items: { type: 'array' },
           },
         },
+        recommendations: {
+          type: 'object',
+          properties: {
+            personalized: { type: 'array' },
+            mostViewed: { type: 'array' },
+            browsingHistory: { type: 'array' },
+          },
+        },
       },
     },
   })
-  async getHomepageData() {
-    return this.homepageService.getHomepageData();
+  async getHomepageData(@Request() req) {
+    return this.homepageService.getHomepageData(req.user?.id);
+  }
+
+  @Get('with-recommendations')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get homepage data with personalized recommendations',
+    description: 'Retrieve homepage data including personalized recommendations for authenticated users',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Homepage data with recommendations retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        featuredProducts: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            products: { type: 'array' },
+          },
+        },
+        newArrivals: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            products: { type: 'array' },
+          },
+        },
+        popularProducts: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            products: { type: 'array' },
+          },
+        },
+        specialOffers: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            products: { type: 'array' },
+          },
+        },
+        categories: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            items: { type: 'array' },
+          },
+        },
+        recommendations: {
+          type: 'object',
+          properties: {
+            personalized: { type: 'array' },
+            mostViewed: { type: 'array' },
+            browsingHistory: { type: 'array' },
+          },
+        },
+      },
+    },
+  })
+  @ApiBearerAuth()
+  async getHomepageDataWithRecommendations(@Request() req) {
+    return this.homepageService.getHomepageDataWithRecommendations(req.user.id);
   }
 
   @Get('featured-products')

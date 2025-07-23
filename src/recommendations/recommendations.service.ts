@@ -58,19 +58,26 @@ export class RecommendationsService {
     if (activity) {
       // Mevcut aktiviteyi güncelle
       if (activityType === 'view') {
+        // Görüntülenen ürünlere ekle
         if (!activity.viewedProducts.includes(new Types.ObjectId(productId))) {
           activity.viewedProducts.push(new Types.ObjectId(productId));
         }
+
+        // Browsing history'ye ekle (son 50 ürün)
         if (!activity.browsingHistory.includes(new Types.ObjectId(productId))) {
           activity.browsingHistory.push(new Types.ObjectId(productId));
+          // Son 50 ürünü tut
+          if (activity.browsingHistory.length > 50) {
+            activity.browsingHistory = activity.browsingHistory.slice(-50);
+          }
         }
       } else if (activityType === 'purchase') {
-        if (
-          !activity.purchasedProducts.includes(new Types.ObjectId(productId))
-        ) {
+        // Satın alınan ürünlere ekle
+        if (!activity.purchasedProducts.includes(new Types.ObjectId(productId))) {
           activity.purchasedProducts.push(new Types.ObjectId(productId));
         }
       }
+      // cart_add için şimdilik bir şey yapmıyoruz, ama ileride kullanılabilir
 
       await activity.save();
     } else {
@@ -89,7 +96,7 @@ export class RecommendationsService {
       await newActivity.save();
     }
 
-    // Vector'ları güncelle
+    // Vector'ları güncelle (cache'de)
     await this.updateUserVector(userId);
     await this.updateProductVector(productId);
   }
@@ -366,6 +373,7 @@ export class RecommendationsService {
     const products = await this.productModel
       .find({ isActive: true })
       .populate('category')
+      .populate('sellerId', 'name email')
       .exec();
 
     const recommendations: Array<{ product: any; similarity: number }> = [];
@@ -398,7 +406,7 @@ export class RecommendationsService {
       .slice(0, limit)
       .map((item) => ({
         ...item.product.toObject(),
-        similarity: item.similarity,
+        score: item.similarity,
       }));
   }
 
@@ -434,26 +442,131 @@ export class RecommendationsService {
       .slice(0, limit)
       .map(([productId]) => productId);
 
-    const products = await this.productModel
-      .find({ _id: { $in: topProductIds }, isActive: true })
-      .populate('category')
-      .exec();
+    let products;
+    if (topProductIds.length > 0) {
+      products = await this.productModel
+        .find({ _id: { $in: topProductIds }, isActive: true })
+        .populate('category')
+        .populate('sellerId', 'name email')
+        .exec();
 
-    return products.map((product) => product.toObject());
+      // Sıralamayı koru
+      const productMap = new Map();
+      products.forEach((product) => {
+        productMap.set((product._id as any).toString(), product);
+      });
+
+      products = topProductIds
+        .map((id) => {
+          const product = productMap.get(id);
+          if (product) {
+            const productObj = product.toObject();
+            (productObj as any).frequency = productCounts[id];
+            return productObj;
+          }
+          return null;
+        })
+        .filter(Boolean);
+    } else {
+      // Hiç sipariş yoksa, aynı kategorideki ürünleri getir
+      const currentProduct = await this.productModel
+        .findById(productId)
+        .populate('category')
+        .exec();
+
+      if (currentProduct) {
+        products = await this.productModel
+          .find({
+            category: currentProduct.category,
+            _id: { $ne: new Types.ObjectId(productId) },
+            isActive: true,
+          })
+          .populate('category')
+          .populate('sellerId', 'name email')
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .exec();
+
+        products = products.map((product) => {
+          const productObj = product.toObject();
+          (productObj as any).frequency = 0;
+          return productObj;
+        });
+      } else {
+        products = [];
+      }
+    }
+
+    return products;
   }
 
   /**
    * Popüler ürünleri getir
    */
   async getPopularProducts(limit: number = 10): Promise<any[]> {
-    const products = await this.productModel
-      .find({ isActive: true })
-      .populate('category')
-      .sort({ price: 1 })
-      .limit(limit)
-      .exec();
+    // Tüm kullanıcı aktivitelerini topla
+    const allActivities = await this.userActivityModel.find().exec();
 
-    return products.map((product) => product.toObject());
+    // Ürün görüntülenme sayılarını hesapla
+    const productViewCounts: { [key: string]: number } = {};
+
+    allActivities.forEach((activity) => {
+      activity.viewedProducts.forEach((productId) => {
+        const productIdStr = productId.toString();
+        productViewCounts[productIdStr] = (productViewCounts[productIdStr] || 0) + 1;
+      });
+    });
+
+    // En popüler ürünleri bul
+    const popularProductIds = Object.entries(productViewCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, limit)
+      .map(([productId]) => new Types.ObjectId(productId));
+
+    let products;
+    if (popularProductIds.length > 0) {
+      // Popüler ürünleri getir
+      products = await this.productModel
+        .find({ _id: { $in: popularProductIds }, isActive: true })
+        .populate('category')
+        .populate('sellerId', 'name email')
+        .exec();
+
+      // Popülerlik sırasını koru
+      const productMap = new Map();
+      products.forEach((product) => {
+        productMap.set((product._id as any).toString(), product);
+      });
+
+      products = popularProductIds
+        .map((id) => {
+          const product = productMap.get(id.toString());
+          if (product) {
+            const productObj = product.toObject();
+            (productObj as any).popularity = productViewCounts[id.toString()];
+            return productObj;
+          }
+          return null;
+        })
+        .filter(Boolean);
+    } else {
+      // Hiç aktivite yoksa, en yeni ürünleri getir
+      products = await this.productModel
+        .find({ isActive: true })
+        .populate('category')
+        .populate('sellerId', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .exec();
+
+              products = products.map((product) => {
+          const productObj = product.toObject();
+          (productObj as any).popularity = 0;
+          return productObj;
+        });
+    }
+
+    return products;
   }
 
   /**
@@ -469,11 +582,16 @@ export class RecommendationsService {
         isActive: true,
       })
       .populate('category')
-      .sort({ price: 1 })
+      .populate('sellerId', 'name email')
+      .sort({ createdAt: -1 }) // En yeni ürünler önce
       .limit(limit)
       .exec();
 
-    return products.map((product) => product.toObject());
+    return products.map((product) => {
+      const productObj = product.toObject();
+      (productObj as any).relevance = 1.0; // Kategori uyumluluğu
+      return productObj;
+    });
   }
 
   /**
@@ -503,23 +621,104 @@ export class RecommendationsService {
       categoryCounts[category] = (categoryCounts[category] || 0) + 1;
     });
 
-    // Kategori analizi yapıldı ama kullanılmadı - şimdilik basit öneriler döndür
-    // const _topCategories = Object.entries(categoryCounts)
-    //   .sort(([, a], [, b]) => b - a)
-    //   .slice(0, 3)
-    //   .map(([category]) => category);
+    // En çok görüntülenen kategorileri bul
+    const topCategories = Object.entries(categoryCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([category]) => category);
 
-    // Bu kategorilerdeki ürünleri getir
+    // Bu kategorilerdeki ürünleri getir (görüntülenenler hariç)
     const products = await this.productModel
       .find({
         isActive: true,
         _id: { $nin: activity.browsingHistory }, // Zaten görüntülenenleri hariç tut
       })
       .populate('category')
-      .sort({ price: 1 }) // Fiyata göre sırala
+      .populate('sellerId', 'name email')
+      .sort({ createdAt: -1 }) // En yeni ürünler önce
       .limit(limit)
       .exec();
 
-    return products.map((product) => product.toObject());
+    return products.map((product) => {
+      const productObj = product.toObject();
+      const categoryName = (product.category as any)?.name || 'other';
+      const categoryIndex = topCategories.indexOf(categoryName);
+      (productObj as any).lastViewed = new Date().toISOString(); // Şimdilik şu anki zaman
+      (productObj as any).categoryRelevance = categoryIndex >= 0 ? 1 - (categoryIndex * 0.2) : 0;
+      return productObj;
+    });
+  }
+
+  /**
+   * Kullanıcının en çok görüntülediği ürünleri getir
+   */
+  async getMostViewedProducts(
+    userId: string,
+    limit: number = 10,
+  ): Promise<any[]> {
+    const activity = await this.userActivityModel
+      .findOne({ userId: new Types.ObjectId(userId) })
+      .exec();
+
+    if (!activity || activity.viewedProducts.length === 0) {
+      return [];
+    }
+
+    // Görüntülenen ürünlerin sayısını hesapla
+    const viewCounts: { [key: string]: number } = {};
+    activity.viewedProducts.forEach((productId) => {
+      const productIdStr = productId.toString();
+      viewCounts[productIdStr] = (viewCounts[productIdStr] || 0) + 1;
+    });
+
+    // En çok görüntülenen ürünleri sırala
+    const sortedProductIds = Object.entries(viewCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, limit)
+      .map(([productId]) => new Types.ObjectId(productId));
+
+    // Ürünleri getir
+    const products = await this.productModel
+      .find({ _id: { $in: sortedProductIds }, isActive: true })
+      .populate('category')
+      .populate('sellerId', 'name email')
+      .exec();
+
+    // Orijinal sıralamayı koru
+    const productMap = new Map();
+    products.forEach((product) => {
+      productMap.set((product._id as any).toString(), product);
+    });
+
+    return sortedProductIds
+      .map((id) => {
+        const product = productMap.get(id.toString());
+        if (product) {
+          const productObj = product.toObject();
+          (productObj as any).viewCount = viewCounts[id.toString()];
+          return productObj;
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }
+
+  /**
+   * Featured ürünleri getir
+   */
+  async getFeaturedProducts(limit: number = 10): Promise<any[]> {
+    const products = await this.productModel
+      .find({ isFeatured: true, isActive: true })
+      .populate('category')
+      .populate('sellerId', 'name email')
+      .sort({ createdAt: -1 }) // En yeni featured ürünler önce
+      .limit(limit)
+      .exec();
+
+    return products.map((product) => {
+      const productObj = product.toObject();
+      (productObj as any).isFeatured = true;
+      return productObj;
+    });
   }
 }

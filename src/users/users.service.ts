@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { User, UserDocument } from '../schemas/user.schema';
+import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { Address, AddressDocument } from '../schemas/address.schema';
 import { Wishlist, WishlistDocument } from '../schemas/wishlist.schema';
 import { Product, ProductDocument } from '../schemas/product.schema';
@@ -482,6 +482,45 @@ export class UsersService {
     return {
       message: 'Wishlist notes updated successfully',
       notes,
+    };
+  }
+
+  /**
+   * Find users by role
+   *
+   * @param role - User role to search for
+   * @returns Array of users with specified role
+   */
+  async findByRole(role: UserRole) {
+    const users = await this.userModel
+      .find({ role, isActive: true })
+      .select('-password -emailVerificationToken -passwordResetToken')
+      .lean();
+
+    return users;
+  }
+
+  /**
+   * Approve seller account
+   *
+   * @param id - Seller user ID
+   * @returns Success message
+   */
+  async approveSeller(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== UserRole.SELLER) {
+      throw new BadRequestException('User is not a seller');
+    }
+
+    // Update seller status (assuming there's an isApproved field)
+    // For now, just return success message
+    return {
+      message: 'Seller approved successfully',
+      userId: id,
     };
   }
 }

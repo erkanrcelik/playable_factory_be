@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,21 +21,12 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../schemas/user.schema';
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import {
   UpdateProfileDto,
   ChangePasswordDto,
   UpdateEmailDto,
-  updateProfileSchema,
-  changePasswordSchema,
-  updateEmailSchema,
 } from './dto/update-profile.dto';
-import {
-  CreateAddressDto,
-  UpdateAddressDto,
-  createAddressSchema,
-  updateAddressSchema,
-} from './dto/address.dto';
+import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
 
 /**
  * Users Controller
@@ -66,7 +56,6 @@ export class UsersController {
 
   @Put('profile')
   @Roles(UserRole.CUSTOMER)
-  @UsePipes(new ZodValidationPipe(updateProfileSchema))
   @ApiOperation({
     summary: 'Update customer profile',
     description: 'Update customer profile information',
@@ -82,7 +71,6 @@ export class UsersController {
 
   @Put('profile/password')
   @Roles(UserRole.CUSTOMER)
-  @UsePipes(new ZodValidationPipe(changePasswordSchema))
   @ApiOperation({
     summary: 'Change password',
     description: 'Change customer password',
@@ -98,7 +86,6 @@ export class UsersController {
 
   @Put('profile/email')
   @Roles(UserRole.CUSTOMER)
-  @UsePipes(new ZodValidationPipe(updateEmailSchema))
   @ApiOperation({
     summary: 'Update email',
     description: 'Update customer email address',
@@ -128,7 +115,6 @@ export class UsersController {
 
   @Post('addresses')
   @Roles(UserRole.CUSTOMER)
-  @UsePipes(new ZodValidationPipe(createAddressSchema))
   @ApiOperation({
     summary: 'Create address',
     description: 'Create new customer address',
@@ -144,7 +130,6 @@ export class UsersController {
 
   @Put('addresses/:addressId')
   @Roles(UserRole.CUSTOMER)
-  @UsePipes(new ZodValidationPipe(updateAddressSchema))
   @ApiOperation({
     summary: 'Update address',
     description: 'Update customer address',
@@ -254,5 +239,25 @@ export class UsersController {
     @Body('notes') notes: string,
   ) {
     return this.usersService.updateWishlistNotes(userId, wishlistItemId, notes);
+  }
+
+  // ADMIN ENDPOINTS
+
+  @Get('sellers')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all sellers (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Sellers retrieved successfully' })
+  @ApiBearerAuth()
+  async getAllSellers() {
+    return this.usersService.findByRole(UserRole.SELLER);
+  }
+
+  @Post('sellers/:id/approve')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Approve seller (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Seller approved successfully' })
+  @ApiBearerAuth()
+  async approveSeller(@Param('id') id: string) {
+    return this.usersService.approveSeller(id);
   }
 }

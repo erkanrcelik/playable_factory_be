@@ -9,6 +9,7 @@ import {
   DiscountType,
 } from '../schemas/campaign.schema';
 import { Order, OrderDocument } from '../schemas/order.schema';
+import { RecommendationsService } from '../recommendations/recommendations.service';
 
 /**
  * Homepage Service
@@ -23,6 +24,7 @@ export class HomepageService {
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
+    private readonly recommendationsService: RecommendationsService,
   ) {}
 
   /**
@@ -311,9 +313,10 @@ export class HomepageService {
   /**
    * Get complete homepage data in a single call
    *
+   * @param userId - Optional user ID for personalized recommendations
    * @returns All homepage sections data
    */
-  async getHomepageData() {
+  async getHomepageData(userId?: string) {
     const [
       featuredProducts,
       newArrivals,
@@ -326,6 +329,83 @@ export class HomepageService {
       this.getPopularProducts(8),
       this.getSpecialOffers(8),
       this.getCategories(12),
+    ]);
+
+    const result = {
+      featuredProducts: {
+        title: 'Featured Products',
+        products: featuredProducts,
+      },
+      newArrivals: {
+        title: 'New Arrivals',
+        products: newArrivals,
+      },
+      popularProducts: {
+        title: 'Popular Products',
+        products: popularProducts,
+      },
+      specialOffers: {
+        title: 'Special Offers',
+        products: specialOffers,
+      },
+      categories: {
+        title: 'Shop by Category',
+        items: categories,
+      },
+    };
+
+    // Eğer kullanıcı login olmuşsa recommendation verilerini ekle
+    if (userId) {
+      try {
+        const [personalized, mostViewed, browsingHistory] = await Promise.all([
+          this.recommendationsService.getPersonalizedRecommendations(userId, 6),
+          this.recommendationsService.getMostViewedProducts(userId, 6),
+          this.recommendationsService.getBrowsingHistoryRecommendations(userId, 6),
+        ]);
+
+        result['recommendations'] = {
+          personalized,
+          mostViewed,
+          browsingHistory,
+        };
+      } catch (error) {
+        // Recommendation servisi çalışmazsa boş array döndür
+        result['recommendations'] = {
+          personalized: [],
+          mostViewed: [],
+          browsingHistory: [],
+        };
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get complete homepage data with personalized recommendations for authenticated users
+   *
+   * @param userId - User ID for personalized recommendations
+   * @returns All homepage sections data with recommendations
+   */
+  async getHomepageDataWithRecommendations(userId: string) {
+    const [
+      featuredProducts,
+      newArrivals,
+      popularProducts,
+      specialOffers,
+      categories,
+      personalized,
+      mostViewed,
+      browsingHistory,
+    ] = await Promise.all([
+      this.getFeaturedProducts(8),
+      this.getNewArrivals(8),
+      this.getPopularProducts(8),
+      this.getSpecialOffers(8),
+      this.getCategories(12),
+      this.recommendationsService.getPersonalizedRecommendations(userId, 6),
+      this.recommendationsService.getMostViewedProducts(userId, 6),
+      this.recommendationsService.getBrowsingHistoryRecommendations(userId, 6),
     ]);
 
     return {
@@ -348,6 +428,11 @@ export class HomepageService {
       categories: {
         title: 'Shop by Category',
         items: categories,
+      },
+      recommendations: {
+        personalized,
+        mostViewed,
+        browsingHistory,
       },
     };
   }
